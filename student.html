@@ -1181,8 +1181,9 @@
             
             try {
                 const { data: announcements, error } = await supabaseClient
-                    .from('announcements')
-                    .select('*')
+                    .from('complaints')
+                    .select('id, title, content, media_url, status, created_at, category, author_role')
+                    .eq('status', 'published')
                     .eq('university_id', currentUserProfile.university_id)
                     .order('created_at', { ascending: false })
                     .limit(5);

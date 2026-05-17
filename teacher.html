@@ -522,7 +522,7 @@
                 const { data: announcements, error: anErr } = await supabaseClient
                     .from('complaints')
                     .select('id, title, content, media_url, status, created_at, votes_count, category, author_role')
-                    .eq('author_role', 'admin')
+                    .eq('status', 'published')
                     .order('created_at', { ascending: false })
                     .limit(20);
 

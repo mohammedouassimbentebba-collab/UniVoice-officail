@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATLAS | Operations Room V11.0 (Smart Edition)</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Cairo', 'Outfit', 'sans-serif'] },
+                    colors: {
+                        glass: 'rgba(255, 255, 255, 0.08)',
+                        primary: '#6366f1',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'listening': 'listening 1.5s infinite',
+                        'fade-in': 'fadeIn 0.5s ease-out forwards',
+                        'slide-up': 'slideUp 0.5s ease-out forwards',
+                    },
+                    keyframes: {
+                        listening: { '0%': { boxShadow: '0 0 0 0 rgba(239, 68, 68, 0.7)' }, '70%': { boxShadow: '0 0 0 15px rgba(239, 68, 68, 0)' }, '100%': { boxShadow: '0 0 0 0 rgba(239, 68, 68, 0)' } },
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        slideUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0f172a;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.15) 0px, transparent 50%);
+            color: #f1f5f9;
+            overflow: hidden;
+        }
+        .glass-box {
+            background: rgba(30, 41, 59, 0.75);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+        .action-card {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+        .action-card:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            transform: translateY(-4px);
+            background: rgba(30, 41, 59, 0.6);
+            box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.2);
+        }
+        .nav-btn {
+            position: relative; overflow: hidden; border-radius: 12px; transition: all 0.2s;
+        }
+        .nav-btn:hover { background: rgba(255,255,255,0.05); color: #fff; }
+        .nav-btn.active {
+            background: rgba(99, 102, 241, 0.15);
+            border-right: 3px solid #6366f1;
+            color: #a5b4fc;
+        }
+        html[dir="ltr"] .nav-btn.active { border-right: none; border-left: 3px solid #6366f1; }
+        
+        /* SCROLLBARS */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+        
+        .voice-active { color: #f87171 !important; animation: listening 1.5s infinite; background: rgba(239, 68, 68, 0.1); border-color: #f87171 !important; }
+        .img-preview { transition: 0.3s; cursor: zoom-in; object-fit: cover; }
+        .loader { width: 48px; height: 48px; border: 5px solid #FFF; border-bottom-color: #6366f1; border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* CHAT WINDOW ANIMATION */
+        #atlas-window { transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease; }
+        #atlas-window.closed { transform: translateY(120%) scale(0.95); opacity: 0; pointer-events: none; }
+        #atlas-window.open { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
+
+        @media (min-width: 1024px) {
+            #sidebar {
+                transform: none !important;
+                position: relative !important;
+                width: 18rem !important; /* w-72 */
+                display: flex !important;
+            }
+            #mobile-overlay { display: none !important; }
+        }
+    </style>
+</head>
+<body class="flex h-screen font-sans text-sm selection:bg-indigo-500 selection:text-white overflow-hidden">
+
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" onclick="UI.toggleSidebar()" class="fixed inset-0 bg-black/80 z-40 hidden lg:hidden transition-opacity backdrop-blur-sm"></div>
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="fixed inset-y-0 z-50 w-72 glass-box flex flex-col transition-transform duration-300 ltr:left-0 ltr:-translate-x-full rtl:right-0 rtl:translate-x-full border-white/5">
+        <div class="h-20 flex items-center px-8 border-b border-white/5 bg-slate-900/50 shrink-0">
+            <div class="flex items-center gap-3">
+                <div id="sidebar-logo" class="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow">NUIF</div>
+                <div id="sidebar-icon" class="w-10 h-10 rounded-xl bg-indigo-600 items-center justify-center text-white shadow-lg shadow-indigo-500/30 hidden">
+                    <i class="fa-solid fa-bolt text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-black text-2xl tracking-wide text-white">ATLAS</h1>
+                    <p class="text-[10px] text-indigo-300 font-bold uppercase tracking-widest">Ops Center</p>
+                </div>
+            </div>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto px-4 py-6 space-y-2 custom-scroll">
+            
+            <div class="px-2 mb-2 text-[10px] font-bold text-slate-500 uppercase" data-i18n="sec_main">الرئيسية</div>
+            <button onclick="Router.go('home')" id="nav-home" class="nav-btn w-full flex items-center gap-4 px-4 py-3 text-slate-400 active">
+                <i class="fa-solid fa-house-laptop w-5 text-center"></i>
+                <span class="font-bold" data-i18n="nav_home">الصفحة الرئيسية</span>
+            </button>
+
+            <div class="px-2 mt-6 mb-2 text-[10px] font-bold text-slate-500 uppercase" data-i18n="sec_admin">الإدارة</div>
+            <button onclick="Router.go('settings')" id="nav-settings" class="nav-btn w-full flex items-center gap-4 px-4 py-3 text-slate-400">
+                <i class="fa-solid fa-building-columns w-5 text-center"></i>
+                <span class="font-bold" data-i18n="nav_settings">إعدادات الجامعة</span>
+            </button>
+            <button onclick="Router.go('teachers-req')" id="nav-teachers-req" class="nav-btn w-full flex items-center gap-4 px-4 py-3 text-slate-400">
+                <i class="fa-solid fa-user-plus w-5 text-center"></i>
+                <span class="font-bold" data-i18n="nav_requests">طلبات الأساتذة</span>
+                <span id="badge-req" class="ltr:ml-auto rtl:mr-auto bg-indigo-500 text-white text-[10px] px-2 py-0.5 rounded-full hidden">0</span>
+            </button>
+
+            <div class="px-2 mt-6 mb-2 text-[10px] font-bold text-slate-500 uppercase" data-i18n="sec_concerns">الانشغالات</div>
+            <button onclick="Router.go('concerns-stud')" id="nav-concerns-stud" class="nav-btn w-full flex items-center gap-4 px-4 py-3 text-slate-400">
+                <i class="fa-solid fa-user-graduate w-5 text-center"></i>
+                <span class="font-bold" data-i18n="nav_stud_concerns">انشغالات الطلبة</span>
+            </button>
+            <button onclick="Router.go('concerns-teach')" id="nav-concerns-teach" class="nav-btn w-full flex items-center gap-4 px-4 py-3 text-slate-400">
+                <i class="fa-solid fa-chalkboard-user w-5 text-center"></i>
+                <span class="font-bold" data-i18n="nav_teach_concerns">انشغالات الأساتذة</span>
+            </button>
+
+            <div class="px-2 mt-6 mb-2 text-[10px] font-bold text-slate-500 uppercase" data-i18n="sec_ai">الذكاء الاصطناعي</div>
+            <button onclick="Router.go('ai-train')" id="nav-ai-train" class="nav-btn w-full flex items-center gap-4 px-4 py-3 text-slate-400">
+                <i class="fa-solid fa-brain w-5 text-center"></i>
+                <span class="font-bold" data-i18n="nav_ai_train">تدريب النظام</span>
+            </button>
+        </nav>
+
+        <div class="p-6 border-t border-white/5 bg-black/20 shrink-0">
+            <button onclick="Auth.logout()" class="w-full py-3 rounded-xl bg-white/5 border border-white/5 text-slate-300 hover:bg-red-500/20 hover:text-white hover:border-red-500/30 transition flex items-center justify-center gap-2 font-bold text-xs group">
+                <i class="fa-solid fa-power-off group-hover:scale-110 transition"></i> <span data-i18n="btn_logout">تسجيل الخروج</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col min-w-0 relative z-10 transition-all duration-300">
+        <!-- Header -->
+        <header class="h-20 flex items-center justify-between px-8 bg-slate-900/30 border-b border-white/5 backdrop-blur-md sticky top-0 z-30">
+            <div class="flex items-center gap-4">
+                <button type="button" title="Toggle sidebar menu" onclick="UI.toggleSidebar()" class="lg:hidden text-white w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/10 transition"><i class="fa-solid fa-bars text-xl"></i></button>
+                <h2 id="page-title" class="text-xl font-black text-white tracking-wide" data-i18n="header_title">العمليات المباشرة</h2>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div class="relative" id="lang-dropdown-wrapper">
+                    <button onclick="document.getElementById('lang-menu').classList.toggle('hidden')" class="h-10 px-4 rounded-xl bg-slate-800 border border-white/10 hover:border-indigo-500 transition flex items-center gap-2 font-bold text-xs text-slate-300">
+                        <i class="fa-solid fa-globe"></i> <span id="current-lang">AR</span>
+                    </button>
+                    <div id="lang-menu" class="absolute top-full rtl:left-0 ltr:right-0 mt-2 w-32 bg-slate-800 border border-white/10 rounded-xl shadow-2xl hidden z-50 overflow-hidden transform origin-top animate-fade-in">
+                        <button onclick="Lang.set('ar'); document.getElementById('lang-menu').classList.add('hidden')" class="w-full text-start px-4 py-3 hover:bg-indigo-500/20 text-slate-300 hover:text-white text-xs border-b border-white/5">العربية</button>
+                        <button onclick="Lang.set('en'); document.getElementById('lang-menu').classList.add('hidden')" class="w-full text-start px-4 py-3 hover:bg-indigo-500/20 text-slate-300 hover:text-white text-xs border-b border-white/5">English</button>
+                        <button onclick="Lang.set('fr'); document.getElementById('lang-menu').classList.add('hidden')" class="w-full text-start px-4 py-3 hover:bg-indigo-500/20 text-slate-300 hover:text-white text-xs">Français</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Loader -->
+        <div id="page-loader" class="absolute inset-0 z-50 flex items-center justify-center bg-[#0f172a] hidden transition-opacity duration-300">
+            <span class="loader"></span>
+        </div>
+
+        <!-- Viewport -->
+        <div id="viewport" class="flex-1 overflow-y-auto p-6 lg:p-10 space-y-8 scroll-smooth relative custom-scroll"></div>
+    </main>
+
+    <!-- ATLAS AI CHAT & TRIGGER (Wrapped in container for easy toggling) -->
+    <div id="ai-widget-container" class="fixed bottom-24 rtl:left-6 ltr:right-6 z-50 flex flex-col items-end pointer-events-none">
+        <!-- Chat Window -->
+        <div id="atlas-window" class="closed glass-box w-[350px] sm:w-[380px] h-[500px] max-h-[60vh] rounded-3xl mb-3 shadow-2xl border border-indigo-500/30 flex flex-col overflow-hidden origin-bottom-end transition-all duration-300">
+            <!-- Header -->
+            <div class="h-14 bg-slate-900 border-b border-white/10 flex items-center justify-between px-5 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white relative">
+                        <i class="fa-solid fa-microchip text-xs relative z-10"></i>
+                        <span class="absolute inset-0 rounded-full bg-indigo-500/50 animate-pulse"></span>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white text-xs" data-i18n="ai_title">أطلس المساعد</h3>
+                        <p class="text-[9px] text-emerald-400 font-mono flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> <span data-i18n="ai_status">متصل (Smart Mode)</span></p>
+                    </div>
+                </div>
+                <button type="button" title="Close chat" onclick="UI.toggleChat()" class="w-7 h-7 rounded-full hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <!-- Messages Area -->
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-950/30 custom-scroll text-xs"></div>
+
+            <!-- Input Area -->
+            <div class="p-3 bg-slate-900 border-t border-white/10 shrink-0 pointer-events-auto">
+                <!-- Quick Suggestions -->
+                <div class="flex gap-2 mb-3 overflow-x-auto custom-scroll pb-1">
+                    <button onclick="AI.ask('summary')" class="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-full text-[10px] text-indigo-300 whitespace-nowrap transition" data-i18n="ai_sugg_summary">ملخص</button>
+                    <button onclick="AI.ask('draft')" class="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-full text-[10px] text-indigo-300 whitespace-nowrap transition" data-i18n="ai_sugg_draft">صياغة</button>
+                    <button onclick="AI.ask('advice')" class="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-full text-[10px] text-indigo-300 whitespace-nowrap transition" data-i18n="ai_sugg_advice">نصيحة</button>
+                </div>
+                <div class="relative">
+                    <input type="text" id="ai-input" onkeydown="if(event.key === 'Enter') AI.send()" class="w-full bg-slate-800 border border-white/10 rounded-xl ltr:pl-3 ltr:pr-9 rtl:pr-3 rtl:pl-9 py-2.5 text-xs text-white focus:border-indigo-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition placeholder-slate-500" placeholder="...">
+                    <button onclick="Voice.start('ai-input', 'mic-ai')" id="mic-ai" class="absolute ltr:right-1.5 rtl:left-1.5 top-1.5 w-7 h-7 flex items-center justify-center text-slate-400 hover:text-white transition rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10" title="تحدث">
+                        <i class="fa-solid fa-microphone text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Trigger -->
+        <button type="button" title="Open AI Chat Assistant" onclick="UI.toggleChat()" class="pointer-events-auto w-14 h-14 bg-gradient-to-br from-indigo-600 to-purple-600 hover:to-purple-500 rounded-full shadow-2xl shadow-indigo-600/40 flex items-center justify-center text-white text-xl transition-all hover:scale-110 active:scale-95 group relative border-4 border-[#0f172a]">
+            <span class="absolute top-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#0f172a] animate-pulse"></span>
+            <i class="fa-solid fa-wand-magic-sparkles group-hover:rotate-12 transition-transform"></i>
+        </button>
+    </div>
+
+    <!-- Media Modal -->
+    <div id="media-modal" class="fixed inset-0 z-[100] bg-black/90 hidden flex items-center justify-center p-4 backdrop-blur-md cursor-zoom-out opacity-0 transition-opacity duration-300" onclick="UI.closeMedia()">
+        <img id="media-img" src="" alt="Media preview" class="max-w-full max-h-[90vh] rounded-2xl shadow-2xl border border-white/10 transform scale-95 transition-transform duration-300" onclick="event.stopPropagation()">
+        <button class="absolute top-4 right-4 text-white hover:text-red-400 transition" title="Close media"><i class="fa-solid fa-xmark text-2xl"></i></button>
+    </div>
+
+    <input type="file" id="file-img" class="hidden" accept="image/*" title="Upload image file" onchange="Actions.fileSelected('img')">
+    <input type="file" id="file-pdf" class="hidden" accept=".pdf" title="Upload PDF file" onchange="Actions.fileSelected('pdf')">
+    <input type="file" id="file-logo" class="hidden" accept="image/*" title="Upload Logo" onchange="Actions.logoSelected(event)">
+
+    <script src="js/utils.js"></script>
+    <script src="js/i18n.js"></script>
+    <script>
+        const supabaseUrl = 'https://ilxdnwapvrpofxnurboe.supabase.co';
+        const supabaseKey = 'sb_publishable_TXbv2AjCh5IimCbTRXZ2hw_hZUMqo6K';
+        // غيرنا الاسم هنا إلى supabaseClient لتفادي التعارض
+        const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        // --- GEMINI API INTEGRATION (SECURE SUPABASE EDGE FUNCTION) ---
+        const Gemini = {
+            async call(prompt, isJson = false, systemPrompt = "You are Atlas, a smart university admin assistant.") {
+                let retries = 3;
+                let delays = [1000, 2000, 4000];
+                
+                for (let i = 0; i < retries; i++) {
+                    try {
+                        // استخدام مكتبة Supabase لاستدعاء الخادم بشكل آمن جداً
+                        // ملاحظة: هذا يتطلب أن يكون المتغير 'supabaseClient' معرفاً في مشروعك
+                        const { data, error } = await supabaseClient.functions.invoke('gemini-proxy', {
+                            body: { prompt, isJson, systemPrompt }
+                        });
+
+                        if (error) throw new Error(error.message);
+                        if (!data.success) throw new Error(data.error || "Unknown error from proxy");
+                        
+                        return data.text; // إرجاع النص الصافي من جيميناي
+                        
+                    } catch (e) {
+                        if (i === retries - 1) throw e;
+                        await new Promise(r => setTimeout(r, delays[i]));
+                    }
+                }
+            }
+        };
+
+        // --- 1. DATA & STATE ---
+        let adminViewLevel = 'all'; // 'all', 'department', 'institute', 'university'
+
+        const DB = {
+            settings: {
+                specs: '',
+                institutes: [],
+                faculties: [],
+                system: 'lmd',
+                concernTypes: ['بيداغوجي', 'تقني', 'إداري', 'خدماتي', 'أخرى'],
+                aiEnabled: true,
+                logo: null
+            },
+            issues: [], // Empty to test real incoming data
+            teachers: [],
+            posts: [], // Empty to test real incoming data
+            syncFromServer: async function() {
+                try {
+                    // Auth Middleware
+                    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+                    if (sessionError || !sessionData.session) { /* window.location.href = 'index.html'; return; */ }
+                    
+                    const { data: profile } = await supabaseClient.from('profiles').select('role').eq('id', sessionData?.session?.user?.id).single();
+                    const safeProfile = profile || {};
+                    if (safeProfile.role !== 'admin' && sessionData?.session?.user?.user_metadata?.role !== 'admin') { /* window.location.href = 'index.html'; return; */ }
+
+                    const { data: complaints, error } = await supabaseClient.from('complaints').select('*, profiles(first_name, last_name, avatar_url)').order('created_at', { ascending: false });
+                    if (error) throw error;
+
+                    DB.issues = (complaints || []).map(c => ({
+                        id: c.id,
+                        author_id: c.author_id,
+                        author: c.profiles ? `${c.profiles.first_name || ''} ${c.profiles.last_name || ''}` : 'مستخدم',
+                        role: c.author_role || 'student',
+                        type: c.author_role || 'student',
+                        cat: c.category || 'عام',
+                        title: c.title || (c.content || '').slice(0, 60),
+                        desc: c.content || '',
+                        img: c.media_url || null,
+                        status: c.status,
+                        assigned_level: c.assigned_level || 'department',
+                        admin_notes: c.admin_notes || '',
+                        admin_reply: c.admin_reply || '',
+                        time: new Date(c.created_at).toLocaleTimeString('ar-SA'),
+                        date: new Date(c.created_at).toLocaleDateString('ar-SA')
+                    }));
+                    
+                    Router.refresh();
+                } catch (err) { console.error('Error syncing:', err); }
+            }
+        };
+
+        // --- 2. LOCALIZATION ---
+        const I18n = {
+            data: window.I18nModule.I18nData,
+            current: 'ar',
+            get: (key) => window.I18nModule.getTranslation(I18n.data, I18n.current, key),
+            set: (lang) => {
+                I18n.current = lang;
+                document.documentElement.lang = lang;
+                document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+                document.getElementById('current-lang').innerText = lang.toUpperCase();
+                
+                document.querySelectorAll('[data-i18n]').forEach(el => {
+                    if(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                        el.placeholder = I18n.get(el.getAttribute('data-i18n'));
+                    } else {
+                        el.innerText = I18n.get(el.getAttribute('data-i18n'));
+                    }
+                });
+                
+                const inputs = ['post-title', 'post-body', 'ai-input'];
+                inputs.forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) {
+                        if(id === 'post-title') el.placeholder = I18n.get('pub_t_ph');
+                        if(id === 'post-body') el.placeholder = I18n.get('pub_b_ph');
+                        if(id === 'ai-input') el.placeholder = I18n.get('ai_ph');
+                        el.style.direction = lang === 'ar' ? 'rtl' : 'ltr';
+                    }
+                });
+
+                document.getElementById('chat-messages').innerHTML = '';
+                setTimeout(() => AI.append(I18n.get('ai_welcome'), 'ai'), 300);
+                
+                // Force UI update for sidebar
+                const s = document.getElementById('sidebar');
+                if(window.innerWidth >= 1024) {
+                    s.classList.remove('ltr:-translate-x-full', 'rtl:translate-x-full', '-translate-x-full', 'translate-x-full');
+                } else {
+                    s.classList.add('ltr:-translate-x-full', 'rtl:translate-x-full');
+                    document.getElementById('mobile-overlay').classList.add('hidden');
+                }
+
+                Router.refresh();
+            }
+        };
+
+        const Lang = I18n;
+
+        // --- 3. ROUTER & VIEWS ---
+        const Router = {
+            current: 'home',
+            go: (page) => {
+                Router.current = page;
+                document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+                const btn = document.getElementById(`nav-${page}`);
+                if(btn) btn.classList.add('active');
+
+                const loader = document.getElementById('page-loader');
+                const vp = document.getElementById('viewport');
+                
+                loader.classList.remove('hidden');
+                setTimeout(() => loader.style.opacity = '1', 10);
+
+                setTimeout(() => {
+                    vp.innerHTML = '';
+                    if (page === 'home') Views.home(vp);
+                    else if (page === 'settings') Views.universitySettings(vp);
+                    else if (page === 'teachers-req') Views.teacherRequests(vp);
+                    else if (page === 'concerns-stud') Views.concerns(vp, 'student');
+                    else if (page === 'concerns-teach') Views.concerns(vp, 'teacher');
+                    else if (page === 'ai-train') Views.aiTrain(vp);
+
+                    if(window.innerWidth < 1024) UI.closeSidebar();
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.classList.add('hidden'), 300);
+                }, 300);
+            },
+            refresh: () => Router.go(Router.current)
+        };
+
+        const Views = {
+            home: (container) => {
+                container.innerHTML = `
+                <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in pb-20">
+                    <div class="lg:col-span-8 space-y-10">
+                        <div class="glass-box p-6 rounded-3xl relative overflow-hidden">
+                            <div class="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10"></div>
+                            <div class="flex justify-between items-center mb-4 relative z-10">
+                                <h3 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-bullhorn text-indigo-400"></i> ${I18n.get('pub_title')}</h3>
+                                <select id="post-target" class="text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 rounded-lg px-3 py-1.5 outline-none focus:border-indigo-500 cursor-pointer">
+                                    <option value="all" class="bg-slate-800">${I18n.get('pub_target_all')}</option>
+                                    <option value="students" class="bg-slate-800">${I18n.get('pub_target_stud')}</option>
+                                    <option value="teachers" class="bg-slate-800">${I18n.get('pub_target_teach')}</option>
+                                </select>
+                            </div>
+
+                            <div class="space-y-4 relative z-10">
+                                <input type="text" id="post-title" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:border-indigo-500 outline-none transition" placeholder="${I18n.get('pub_t_ph')}">
+                                <div class="relative">
+                                    <textarea id="post-body" rows="3" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:border-indigo-500 outline-none transition resize-none" placeholder="${I18n.get('pub_b_ph')}"></textarea>
+                                    <button onclick="Voice.start('post-body', 'mic-post')" id="mic-post" class="absolute rtl:left-3 ltr:right-3 bottom-3 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition"><i class="fa-solid fa-microphone"></i></button>
+                                </div>
+                                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pt-2 gap-4">
+                                    <div class="flex flex-wrap gap-2">
+                                        <button onclick="document.getElementById('file-img').click()" id="btn-img" class="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-slate-300 transition flex items-center gap-2"><i class="fa-solid fa-image text-indigo-400"></i> ${I18n.get('pub_img')}</button>
+                                        <button onclick="document.getElementById('file-pdf').click()" id="btn-pdf" class="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-slate-300 transition flex items-center gap-2"><i class="fa-solid fa-file-pdf text-red-400"></i> ${I18n.get('pub_pdf')}</button>
+                                        <button onclick="Actions.toggleState('interact')" id="btn-interact" data-active="false" class="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-slate-300 transition flex items-center gap-2"><i class="fa-solid fa-heart"></i> ${I18n.get('pub_interact')}</button>
+                                        <button onclick="Actions.toggleState('comments')" id="btn-comments" data-active="false" class="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-slate-300 transition flex items-center gap-2"><i class="fa-solid fa-comments"></i> ${I18n.get('pub_comments')}</button>
+                                    </div>
+                                    <div class="flex gap-2 w-full sm:w-auto">
+                                        <button onclick="Actions.escalate()" class="w-full sm:w-auto px-6 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl shadow-lg shadow-rose-600/30 transition transform active:scale-95 text-xs shrink-0 flex items-center justify-center gap-2"><i class="fa-solid fa-arrow-up-right-dots"></i> ${I18n.get('pub_escalate')}</button>
+                                        <button onclick="Actions.publish()" class="w-full sm:w-auto px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition transform active:scale-95 text-xs shrink-0">${I18n.get('pub_btn')}</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-bold text-white mb-4 px-2 rtl:border-r-4 ltr:border-l-4 border-indigo-500 rtl:pr-3 ltr:pl-3">${I18n.get('feed_title')}</h3>
+                            
+                            <!-- Level Filter Tabs -->
+                            <div class="flex flex-wrap gap-2 mb-6 p-3 bg-slate-800/50 rounded-2xl border border-white/5">
+                                <span class="text-[10px] text-slate-500 font-bold self-center px-2"><i class="fa-solid fa-filter"></i> ${I18n.get('filter_level_title')}</span>
+                                <button onclick="Actions.setLevelFilter('all')" class="level-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition border ${adminViewLevel === 'all' ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-600/30' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'}">${I18n.get('filter_all_levels')}</button>
+                                <button onclick="Actions.setLevelFilter('department')" class="level-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition border ${adminViewLevel === 'department' ? 'bg-emerald-600 text-white border-emerald-500 shadow-lg shadow-emerald-600/30' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'}"><i class="fa-solid fa-building-user mr-1"></i> ${I18n.get('level_department')}</button>
+                                <button onclick="Actions.setLevelFilter('institute')" class="level-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition border ${adminViewLevel === 'institute' ? 'bg-amber-600 text-white border-amber-500 shadow-lg shadow-amber-600/30' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'}"><i class="fa-solid fa-school mr-1"></i> ${I18n.get('level_institute')}</button>
+                                <button onclick="Actions.setLevelFilter('university')" class="level-filter-btn px-4 py-2 rounded-xl text-xs font-bold transition border ${adminViewLevel === 'university' ? 'bg-red-600 text-white border-red-500 shadow-lg shadow-red-600/30' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'}"><i class="fa-solid fa-university mr-1"></i> ${I18n.get('level_university')}</button>
+                            </div>
+
+                            <div class="grid gap-6">
+                                ${(() => {
+                                    const filtered = adminViewLevel === 'all' ? DB.issues : DB.issues.filter(i => i.assigned_level === adminViewLevel);
+                                    return filtered.length > 0 ? filtered.map(item => Views.components.issueCard(item)).join('') : '<div class="text-center py-10 text-slate-500"><i class="fa-solid fa-inbox text-3xl mb-3"></i><p>' + I18n.get('empty_list') + '</p></div>';
+                                })()}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="lg:col-span-4 space-y-6">
+                        <h3 class="text-lg font-bold text-white mb-6 px-2 rtl:border-r-4 ltr:border-l-4 border-purple-500 rtl:pr-3 ltr:pl-3">${I18n.get('sec_posts')}</h3>
+                        <div class="grid gap-4">
+                            ${DB.posts.map(p => Views.components.postCard(p)).join('')}
+                            ${DB.posts.length === 0 ? `<div class="text-center py-10 text-slate-500 text-xs"><i class="fa-solid fa-box-open text-2xl mb-2"></i><br>${I18n.get('empty_list')}</div>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+            },
+            universitySettings: (container) => {
+                const s = DB.settings;
+                const aiBtnClass = s.aiEnabled ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30';
+                const aiBtnIcon = s.aiEnabled ? '<i class="fa-solid fa-toggle-on"></i>' : '<i class="fa-solid fa-toggle-off"></i>';
+                const aiBtnText = s.aiEnabled ? I18n.get('btn_ai_on') : I18n.get('btn_ai_off');
+
+                container.innerHTML = `
+                <div class="max-w-4xl mx-auto animate-fade-in pb-20">
+                    <div class="glass-box p-8 rounded-3xl relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5"></div>
+                        <h3 class="text-xl font-bold text-white mb-8 relative z-10 flex items-center gap-3"><i class="fa-solid fa-building-columns text-indigo-400"></i> ${I18n.get('set_title')}</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                            <!-- Logo Upload -->
+                            <div class="md:col-span-2 flex items-center gap-6 p-4 bg-black/20 rounded-2xl border border-white/5">
+                                <div class="relative group cursor-pointer" onclick="document.getElementById('file-logo').click()">
+                                    <div class="w-20 h-20 rounded-2xl bg-slate-800 border border-white/10 flex items-center justify-center overflow-hidden">
+                                        ${s.logo ? `<img src="${s.logo}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-image text-2xl text-slate-500"></i>`}
+                                    </div>
+                                    <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center rounded-2xl backdrop-blur-sm">
+                                        <i class="fa-solid fa-pen text-white"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold text-white mb-1">${I18n.get('set_logo')}</label>
+                                    <p class="text-xs text-slate-400">Upload high quality PNG/JPG</p>
+                                </div>
+                            </div>
+
+                            <!-- Basic Info -->
+                            <div class="md:col-span-2 space-y-2">
+                                <label class="block text-xs font-bold text-slate-300 px-1">${I18n.get('set_specs')}</label>
+                                <input type="number" id="set-specs" value="${s.specs}" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 outline-none transition">
+                            </div>
+
+                            <!-- Institutes -->
+                            <div class="md:col-span-2 space-y-2">
+                                <label class="block text-xs font-bold text-slate-300 px-1">${I18n.get('set_inst')}</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="input-institutes" onkeydown="if(event.key === 'Enter') Actions.addListItem('institutes')" class="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-indigo-500 outline-none transition" placeholder="${I18n.get('set_inst')}...">
+                                    <button onclick="Actions.addListItem('institutes')" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-lg shadow-emerald-600/30 transition text-xs flex items-center gap-2"><i class="fa-solid fa-plus"></i> ${I18n.get('btn_add')}</button>
+                                </div>
+                                <div id="list-institutes" class="flex flex-wrap gap-2 mt-2"></div>
+                            </div>
+
+                            <!-- Faculties -->
+                            <div class="md:col-span-2 space-y-2">
+                                <label class="block text-xs font-bold text-slate-300 px-1">${I18n.get('set_faculties')}</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="input-faculties" onkeydown="if(event.key === 'Enter') Actions.addListItem('faculties')" class="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-indigo-500 outline-none transition" placeholder="${I18n.get('set_faculties')}...">
+                                    <button onclick="Actions.addListItem('faculties')" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-600/30 transition text-xs flex items-center gap-2"><i class="fa-solid fa-plus"></i> ${I18n.get('btn_add')}</button>
+                                </div>
+                                <div id="list-faculties" class="flex flex-wrap gap-2 mt-2"></div>
+                            </div>
+
+                            <!-- System & Levels -->
+                            <div class="md:col-span-2 space-y-4 p-5 bg-black/20 rounded-2xl border border-white/5">
+                                <div class="space-y-2">
+                                    <label class="block text-xs font-bold text-indigo-300 px-1"><i class="fa-solid fa-graduation-cap"></i> ${I18n.get('set_system')}</label>
+                                    <select id="set-system" onchange="Actions.updateSystemLevels()" class="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 outline-none transition cursor-pointer">
+                                        <option value="lmd" ${s.system === 'lmd' ? 'selected' : ''}>${I18n.get('set_sys_lmd')}</option>
+                                        <option value="usa" ${s.system === 'usa' ? 'selected' : ''}>${I18n.get('set_sys_usa')}</option>
+                                        <option value="classic" ${s.system === 'classic' ? 'selected' : ''}>${I18n.get('set_sys_classic')}</option>
+                                        <option value="schools" ${s.system === 'schools' ? 'selected' : ''}>${I18n.get('set_sys_schools')}</option>
+                                        <option value="res" ${s.system === 'res' ? 'selected' : ''}>${I18n.get('set_sys_res')}</option>
+                                        <option value="other" ${s.system === 'other' ? 'selected' : ''}>${I18n.get('set_sys_other')}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <span class="block text-[10px] text-slate-400 mb-2">${I18n.get('set_levels')}</span>
+                                    <div id="sys-levels-container" class="flex flex-wrap gap-2"></div>
+                                </div>
+                            </div>
+
+                            <!-- Concern Types -->
+                            <div class="md:col-span-2 space-y-2">
+                                <label class="block text-xs font-bold text-slate-300 px-1">${I18n.get('set_concern_types')}</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="input-concernTypes" onkeydown="if(event.key === 'Enter') Actions.addListItem('concernTypes')" class="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-indigo-500 outline-none transition" placeholder="${I18n.get('set_concern_types')}...">
+                                    <button onclick="Actions.addListItem('concernTypes')" class="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold shadow-lg shadow-rose-600/30 transition text-xs flex items-center gap-2"><i class="fa-solid fa-plus"></i> ${I18n.get('btn_add')}</button>
+                                </div>
+                                <div id="list-concernTypes" class="flex flex-wrap gap-2 mt-2"></div>
+                            </div>
+
+                            <!-- AI Toggle -->
+                            <div class="md:col-span-2 flex items-center justify-between p-5 bg-indigo-500/5 rounded-2xl border border-indigo-500/10 mt-2">
+                                <div>
+                                    <h4 class="font-bold text-white text-sm mb-1"><i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i> ${I18n.get('set_ai_toggle')}</h4>
+                                    <p class="text-[10px] text-slate-400">Enable or disable background AI processing and smart chat.</p>
+                                </div>
+                                <button id="btn-toggle-ai" onclick="Actions.toggleAI()" class="px-5 py-2 rounded-xl border font-bold transition flex items-center gap-2 text-xs ${aiBtnClass}">
+                                    ${aiBtnIcon} ${aiBtnText}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 pt-6 border-t border-white/5 flex justify-end relative z-10">
+                            <button onclick="Actions.saveSettings()" class="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition transform active:scale-95 text-xs"><i class="fa-solid fa-floppy-disk"></i> ${I18n.get('btn_save')}</button>
+                        </div>
+                    </div>
+                </div>`;
+                
+                // Initialize levels and lists on render
+                setTimeout(() => {
+                    Actions.updateSystemLevels();
+                    Actions.renderList('institutes');
+                    Actions.renderList('faculties');
+                    Actions.renderList('concernTypes');
+                }, 50);
+            },
+            components: {
+                postCard: (p) => {
+                    const targetLabel = p.target === 'students' ? I18n.get('pub_target_stud') : (p.target === 'teachers' ? I18n.get('pub_target_teach') : I18n.get('pub_target_all'));
+                    return `
+                    <div class="action-card p-5 rounded-2xl relative animate-fade-in">
+                        <div class="flex justify-between items-start mb-2 gap-2">
+                            <h4 class="font-bold text-white text-sm leading-snug">${p.title}</h4>
+                            <span class="text-[9px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/30 whitespace-nowrap">${targetLabel}</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mb-4 line-clamp-3 leading-relaxed">${p.body}</p>
+                        <div class="flex justify-between items-center text-[10px] text-slate-500 border-t border-white/5 pt-3 mt-auto">
+                            <span>${p.date}</span>
+                            <div class="flex gap-3">
+                                ${p.interacts >= 0 ? `<span class="flex items-center gap-1.5"><i class="fa-solid fa-heart text-red-400/70"></i> ${p.interacts}</span>` : ''}
+                                ${p.comments >= 0 ? `<span class="flex items-center gap-1.5"><i class="fa-solid fa-comment text-blue-400/70"></i> ${p.comments}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+                },
+                issueCard: (i, isPending = true) => {
+                    const badge = i.status === 'urgent' 
+                        ? `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-[10px] font-bold animate-pulse">${I18n.get('badge_urgent')}</span>` 
+                        : `<span class="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-3 py-1 rounded-full text-[10px] font-bold">${i.status}</span>`;
+                    
+                    const levelColorMap = { department: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', institute: 'bg-amber-500/10 text-amber-400 border-amber-500/20', university: 'bg-red-500/10 text-red-400 border-red-500/20' };
+                    const levelLabel = I18n.get('level_badge_' + (i.assigned_level || 'department'));
+                    const levelBadge = `<span class="px-3 py-1 rounded-full text-[10px] font-bold border ${levelColorMap[i.assigned_level] || levelColorMap.department}"><i class="fa-solid fa-layer-group mr-1"></i> ${levelLabel}</span>`;
+
+                    const img = i.img ? `<div class="mt-4 w-fit cursor-pointer group relative overflow-hidden rounded-xl" onclick="UI.showMedia('${i.img}')"><img src="${i.img}" class="h-28 border border-white/10 img-preview"><div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition backdrop-blur-sm"><i class="fa-solid fa-expand text-white"></i></div></div>` : '';
+
+                    const adminNotesHtml = i.admin_notes ? `<div class="mt-3 p-3 rounded-lg bg-purple-900/20 border border-purple-500/20 text-xs"><div class="flex items-center gap-2 mb-1 text-purple-400 font-bold"><i class="fa-solid fa-note-sticky"></i> ${I18n.get('admin_notes_title')}</div><p class="text-slate-300 leading-relaxed">${i.admin_notes}</p></div>` : '';
+
+                    const canEscalate = isPending && i.assigned_level !== 'university';
+                    const escalateBtn = canEscalate ? `<button onclick="Actions.escalateIssue('${i.id}')" class="px-4 py-1.5 bg-rose-600/10 text-rose-400 border border-rose-500/20 hover:bg-rose-600 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1"><i class="fa-solid fa-arrow-up-right-dots"></i> ${I18n.get('btn_escalate_issue')}</button>` : '';
+
+                    return `
+                    <div class="action-card p-6 rounded-2xl relative group animate-fade-in" id="issue-${i.id}">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-sm shadow-inner">${i.author[0]}</div>
+                                <div>
+                                    <div class="font-bold text-white text-sm">${i.author} <span class="text-[10px] text-slate-500 bg-white/5 px-2 rounded-md mx-1 border border-white/5">${i.role === 'student' ? 'Student' : 'Teacher'}</span></div>
+                                    <div class="text-[10px] text-slate-500">${i.date} • ${i.time}</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 flex-wrap justify-end">${levelBadge} ${badge}</div>
+                        </div>
+                        <h4 class="text-sm font-bold text-indigo-400 mb-1">${i.cat}: ${i.title}</h4>
+                        <p class="text-xs text-slate-300 leading-relaxed bg-black/20 p-3 rounded-lg border border-white/5">${i.desc}</p>
+                        ${img}
+                        ${adminNotesHtml}
+                        ${isPending ? `<textarea id="admin-reply-${i.id}" placeholder="اكتب توجيهاً أو رداً خاصاً لصاحب الانشغال..." class="w-full mt-3 p-2 border border-slate-700 bg-slate-800 text-white rounded text-sm placeholder-slate-500 focus:border-indigo-500 focus:outline-none"></textarea>` : ''}
+                        <div class="flex flex-wrap gap-2 mt-5 pt-4 border-t border-white/5 justify-end items-center">
+                            ${isPending ? `
+                            ${escalateBtn}
+                            <button onclick="Actions.updateStatus('${i.id}', 'approved')" class="px-4 py-1.5 bg-blue-600/10 text-blue-400 border border-blue-500/20 hover:bg-blue-600 hover:text-white rounded-lg text-xs font-bold transition">موافقة ونشر</button>
+                            <button onclick="Actions.updateStatus('${i.id}', 'resolved')" class="px-4 py-1.5 bg-emerald-600/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white rounded-lg text-xs font-bold transition">حل نهائي</button>
+                            <button onclick="Actions.updateStatus('${i.id}', 'temp_solution')" class="px-4 py-1.5 bg-orange-600/10 text-orange-400 border border-orange-500/20 hover:bg-orange-600 hover:text-white rounded-lg text-xs font-bold transition"><i class="fa-solid fa-wrench mr-1"></i> حل مؤقت</button>
+                            <button onclick="Actions.updateStatus('${i.id}', 'needs_info')" class="px-4 py-1.5 bg-yellow-600/10 text-yellow-400 border border-yellow-500/20 hover:bg-yellow-600 hover:text-white rounded-lg text-xs font-bold transition"><i class="fa-solid fa-question-circle mr-1"></i> طلب تفاصيل</button>
+                            <button onclick="Actions.updateStatus('${i.id}', 'rejected')" class="px-3 py-1.5 bg-slate-800 text-slate-400 border border-white/10 hover:bg-red-500 hover:text-white hover:border-red-500 rounded-lg transition"><i class="fa-solid fa-trash-can"></i> رفض</button>
+                            ` : `<span class="text-xs text-slate-500 italic">تمت المعالجة (${i.status})</span>`}
+                        </div>
+                    </div>`;
+                }
+            },
+            teacherRequests: (c) => {
+                if(DB.teachers.length === 0) { c.innerHTML = `<div class="text-center py-20 text-slate-500 animate-fade-in"><i class="fa-solid fa-check-double text-4xl mb-4 text-slate-600"></i><p>${I18n.get('empty_list')}</p></div>`; return; }
+                let html = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up max-w-5xl mx-auto pb-20">`;
+                DB.teachers.forEach(t => {
+                    html += `
+                    <div class="action-card p-5 rounded-2xl flex flex-col justify-between" id="teach-${t.id}">
+                        <div class="flex items-start gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-lg font-bold text-white border border-white/10 shadow-inner">${t.name[0]}</div>
+                            <div>
+                                <h4 class="font-bold text-white text-base">${t.name}</h4>
+                                <p class="text-xs text-indigo-400 mb-1">${t.email}</p>
+                                <span class="text-[10px] bg-white/5 px-2 py-0.5 rounded text-slate-400 border border-white/5">${t.spec}</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 mt-auto pt-4 border-t border-white/5">
+                            <button onclick="Actions.approveT('${t.id}')" class="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow-lg shadow-emerald-900/20">${I18n.get('btn_approve')}</button>
+                            <button onclick="document.getElementById('teach-${t.id}').remove()" class="px-4 py-2 bg-slate-800 text-red-400 border border-white/10 hover:bg-red-500 hover:text-white hover:border-red-500 rounded-lg text-xs font-bold transition">${I18n.get('btn_reject')}</button>
+                        </div>
+                    </div>`;
+                });
+                html += `</div>`;
+                c.innerHTML = html;
+            },
+            concerns: (c, type) => {
+                const levelFilter = (items) => adminViewLevel === 'all' ? items : items.filter(i => i.assigned_level === adminViewLevel);
+                const pending = levelFilter(DB.issues.filter(i => i.type === type && i.status === 'pending'));
+                const processed = levelFilter(DB.issues.filter(i => i.type === type && i.status !== 'pending'));
+                
+                let html = `
+                <div class="max-w-7xl mx-auto pb-20 animate-slide-up">
+                    <!-- Level Filter Tabs -->
+                    <div class="flex flex-wrap gap-2 mb-6 p-3 bg-slate-800/50 rounded-2xl border border-white/5">
+                        <span class="text-[10px] text-slate-500 font-bold self-center px-2"><i class="fa-solid fa-filter"></i> ${I18n.get('filter_level_title')}</span>
+                        <button onclick="Actions.setLevelFilter('all')" class="px-4 py-2 rounded-xl text-xs font-bold transition border ${adminViewLevel === 'all' ? 'bg-indigo-600 text-white border-indigo-500' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'}">${I18n.get('filter_all_levels')}</button>
+                        <button onclick="Actions.setLevelFilter('department')" class="px-4 py-2 rounded-xl text-xs font-bold transition border ${adminViewLevel === 'department' ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'}"><i class="fa-solid fa-building-user mr-1"></i> ${I18n.get('level_department')}</button>
+                        <button onclick="Actions.setLevelFilter('institute')" class="px-4 py-2 rounded-xl text-xs font-bold transition border ${adminViewLevel === 'institute' ? 'bg-amber-600 text-white border-amber-500' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'}"><i class="fa-solid fa-school mr-1"></i> ${I18n.get('level_institute')}</button>
+                        <button onclick="Actions.setLevelFilter('university')" class="px-4 py-2 rounded-xl text-xs font-bold transition border ${adminViewLevel === 'university' ? 'bg-red-600 text-white border-red-500' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'}"><i class="fa-solid fa-university mr-1"></i> ${I18n.get('level_university')}</button>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Pending Queue -->
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-300 mb-6 border-b border-white/10 pb-2">طابور الانتظار (${pending.length})</h3>
+                        <div class="grid gap-6">
+                            ${pending.length > 0 ? pending.map(i => Views.components.issueCard(i, true)).join('') : '<div class="text-center py-10 text-slate-500"><i class="fa-solid fa-check-double text-4xl mb-4 text-slate-600"></i><p>لا توجد طلبات معلقة</p></div>'}
+                        </div>
+                    </div>
+                    <!-- Processed Queue -->
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-300 mb-6 border-b border-white/10 pb-2">سجل المعالجة (${processed.length})</h3>
+                        <div class="grid gap-6">
+                            ${processed.length > 0 ? processed.map(i => Views.components.issueCard(i, false)).join('') : '<div class="text-center py-10 text-slate-500"><i class="fa-solid fa-inbox text-4xl mb-4 text-slate-600"></i><p>لا توجد طلبات معالجة</p></div>'}
+                        </div>
+                    </div>
+                    </div>
+                </div>`;
+                c.innerHTML = html;
+            },
+            aiTrain: (c) => {
+                if(!DB.settings.aiEnabled) {
+                     c.innerHTML = `<div class="text-center py-20 text-slate-500 animate-fade-in"><i class="fa-solid fa-robot text-4xl mb-4 text-slate-600"></i><p>الذكاء الاصطناعي معطل من الإعدادات</p></div>`; return;
+                }
+                c.innerHTML = `
+                <div class="glass-box p-10 rounded-3xl text-center max-w-2xl mx-auto mt-10 animate-fade-in relative overflow-hidden">
+                    <div class="absolute inset-0 bg-indigo-500/5 blur-3xl"></div>
+                    <div class="w-24 h-24 rounded-full bg-slate-900 border border-indigo-500/30 flex items-center justify-center mx-auto mb-6 shadow-2xl relative z-10">
+                        <i class="fa-solid fa-brain text-4xl text-purple-500 animate-pulse"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-2 relative z-10">${I18n.get('nav_ai_train')}</h2>
+                    <p class="text-emerald-400 text-sm mb-8 relative z-10"><i class="fa-solid fa-check-circle"></i> ATLAS Neural Engine v11.4 (Gemini 2.5 Flash Connected)</p>
+                    <button class="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-600/30 transition relative z-10 hover:scale-105 active:scale-95">Re-index Database</button>
+                    <div class="mt-8 text-[10px] text-slate-400 bg-black/40 p-4 rounded-xl text-left font-mono border border-white/5">
+                        <span class="text-purple-400">System.Log:</span><br>
+                        [OK] Gemini API Endpoint Verified.<br>
+                        [OK] Smart Concerns Analysis Module is Active.<br>
+                        [OK] Multi-language NLP models loaded.
+                    </div>
+                </div>`;
+            }
+        };
+
+        const Actions = {
+            setLevelFilter: (level) => {
+                adminViewLevel = level;
+                Router.refresh();
+            },
+            escalateIssue: async (id) => {
+                const issue = DB.issues.find(i => String(i.id) === String(id));
+                if (!issue) return;
+
+                const nextLevel = { department: 'institute', institute: 'university' };
+                const newLevel = nextLevel[issue.assigned_level];
+                if (!newLevel) {
+                    return Swal.fire({toast:true, position:'top-end', icon:'info', title: I18n.get('escalate_already_max'), background:'#1e293b', color:'#fff', showConfirmButton:false, timer:2000});
+                }
+
+                const { value: formValues } = await Swal.fire({
+                    title: I18n.get('escalate_confirm_title'),
+                    html: `
+                        <p style="color:#94a3b8; font-size:13px; margin-bottom:16px;">${I18n.get('escalate_confirm_text')}</p>
+                        <label style="display:block; text-align:start; color:#a5b4fc; font-size:12px; font-weight:700; margin-bottom:6px;">${I18n.get('escalate_note_label')}</label>
+                        <textarea id="swal-admin-note" rows="3" style="width:100%; background:#0f172a; border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px; color:#f1f5f9; font-size:13px; resize:none; outline:none;" placeholder="${I18n.get('escalate_note_placeholder')}"></textarea>
+                    `,
+                    showCancelButton: true,
+                    confirmButtonColor: '#e11d48',
+                    cancelButtonColor: '#334155',
+                    confirmButtonText: I18n.get('escalate_btn_confirm'),
+                    cancelButtonText: I18n.get('escalate_btn_cancel'),
+                    background: '#1e293b',
+                    color: '#fff',
+                    preConfirm: () => {
+                        return { note: document.getElementById('swal-admin-note').value.trim() };
+                    }
+                });
+
+                if (!formValues) return; // Cancelled
+
+                try {
+                    const updateData = { assigned_level: newLevel };
+                    if (formValues.note) {
+                        const existingNotes = issue.admin_notes || '';
+                        const timestamp = new Date().toLocaleString(I18n.current === 'ar' ? 'ar-SA' : 'en-US');
+                        const newNote = existingNotes 
+                            ? existingNotes + '\n---\n[' + timestamp + '] ' + formValues.note
+                            : '[' + timestamp + '] ' + formValues.note;
+                        updateData.admin_notes = newNote;
+                    }
+
+                    const { error } = await supabaseClient.from('complaints').update(updateData).eq('id', id);
+                    if (error) throw error;
+
+                    Swal.fire({toast:true, position:'top-end', icon:'success', title: I18n.get('escalate_success'), background:'#1e293b', color:'#fff', showConfirmButton:false, timer:2000});
+                    DB.syncFromServer();
+                } catch(e) {
+                    console.error(e);
+                    Swal.fire({toast:true, position:'top-end', icon:'error', title:'Error', background:'#1e293b', color:'#fff', showConfirmButton:false, timer:1500});
+                }
+            },
+            addListItem: (type) => {
+                const input = document.getElementById(`input-${type}`);
+                if (!input) return;
+                const val = input.value.trim();
+                if(val) {
+                    if(!DB.settings[type]) DB.settings[type] = [];
+                    if(!DB.settings[type].includes(val)) {
+                        DB.settings[type].push(val);
+                        Actions.renderList(type);
+                    }
+                    input.value = '';
+                    input.focus();
+                }
+            },
+            removeListItem: (type, index) => {
+                DB.settings[type].splice(index, 1);
+                Actions.renderList(type);
+            },
+            renderList: (type) => {
+                const container = document.getElementById(`list-${type}`);
+                if(!container) return;
+                const items = DB.settings[type] || [];
+                
+                let colorClass = 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30';
+                if (type === 'institutes') colorClass = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+                else if (type === 'concernTypes') colorClass = 'bg-rose-500/20 text-rose-300 border-rose-500/30';
+                
+                container.innerHTML = items.map((item, idx) => `
+                    <div class="flex items-center gap-2 ${colorClass} px-3 py-1.5 rounded-lg border animate-fade-in text-xs">
+                        <span>${item}</span>
+                        <button onclick="Actions.removeListItem('${type}', ${idx})" class="hover:text-red-400 transition ml-2 rtl:mr-2 rtl:ml-0"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                `).join('');
+            },
+            fileSelected: (type) => {
+                const btn = document.getElementById(`btn-${type}`);
+                btn.classList.add('border-emerald-500', 'text-emerald-400', 'bg-emerald-500/10');
+                btn.innerHTML = `<i class="fa-solid fa-check"></i> ${I18n.get('file_selected')}`;
+            },
+            logoSelected: (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(evt) {
+                        DB.settings.logo = evt.target.result;
+                        Router.refresh(); // Reload settings view to show image
+                        
+                        // Update Sidebar Logo if it exists
+                        const sidebarLogo = document.getElementById('sidebar-logo');
+                        const sidebarIcon = document.getElementById('sidebar-icon');
+                        if(sidebarLogo && sidebarIcon) {
+                            sidebarLogo.src = DB.settings.logo;
+                            sidebarLogo.classList.remove('hidden');
+                            sidebarIcon.classList.add('hidden');
+                        }
+                    };
+                    reader.readAsDataURL(e.target.files[0]);
+                }
+            },
+            toggleState: (id) => {
+                const btn = document.getElementById(`btn-${id}`);
+                const isActive = btn.dataset.active === 'true';
+                if (isActive) {
+                    btn.dataset.active = 'false';
+                    btn.classList.remove('bg-emerald-500/10', 'text-emerald-400', 'border-emerald-500');
+                    btn.classList.add('bg-white/5', 'text-slate-300', 'border-white/5');
+                } else {
+                    btn.dataset.active = 'true';
+                    btn.classList.remove('bg-white/5', 'text-slate-300', 'border-white/5');
+                    btn.classList.add('bg-emerald-500/10', 'text-emerald-400', 'border-emerald-500');
+                }
+            },
+            escalate: () => {
+                const title = document.getElementById('post-title').value;
+                const body = document.getElementById('post-body').value;
+                
+                if(!title && !body) {
+                    return Swal.fire({toast:true, position:'top-end', icon:'warning', title: I18n.current === 'ar' ? 'الرجاء كتابة تفاصيل المشكلة أولاً' : 'Please write the issue details first', background:'#1e293b', color:'#fff', showConfirmButton:false, timer:2000});
+                }
+
+                Swal.fire({
+                    title: I18n.current === 'ar' ? 'تصعيد لجهة عليا؟' : (I18n.current === 'en' ? 'Escalate to higher authority?' : 'Escalader à l\'autorité supérieure?'),
+                    text: I18n.current === 'ar' ? 'هل أنت متأكد من تصعيد هذه المشكلة؟' : (I18n.current === 'en' ? 'Are you sure you want to escalate this issue?' : 'Êtes-vous sûr de vouloir escalader ce problème?'),
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#e11d48',
+                    cancelButtonColor: '#334155',
+                    confirmButtonText: I18n.current === 'ar' ? 'نعم، تصعيد' : (I18n.current === 'en' ? 'Yes, Escalate' : 'Oui, Escalader'),
+                    cancelButtonText: I18n.current === 'ar' ? 'إلغاء' : (I18n.current === 'en' ? 'Cancel' : 'Annuler'),
+                    background: '#1e293b',
+                    color: '#fff'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        document.getElementById('post-title').value = '';
+                        document.getElementById('post-body').value = '';
+                        
+                        Swal.fire({
+                            title: I18n.current === 'ar' ? 'تم التصعيد بنجاح' : (I18n.current === 'en' ? 'Successfully Escalated' : 'Escaladé avec succès'),
+                            text: I18n.current === 'ar' ? 'تم تحويل المشكلة إلى الإدارة العليا.' : (I18n.current === 'en' ? 'The issue has been forwarded to upper management.' : 'Le problème a été transmis à la direction.'),
+                            icon: 'success',
+                            background: '#1e293b',
+                            color: '#fff',
+                            showConfirmButton: false,
+                            timer: 2000
+                        });
+                    }
+                });
+            },
+            publish: async () => {
+                const t = document.getElementById('post-title').value;
+                const b = document.getElementById('post-body').value;
+                const target = document.getElementById('post-target').value;
+                const interacts = document.getElementById('btn-interact').dataset.active === 'true' ? 0 : -1;
+                const comments = document.getElementById('btn-comments').dataset.active === 'true' ? 0 : -1;
+
+                if(!t || !b) return Swal.fire({toast:true, position:'top-end', icon:'warning', title:'!', background:'#1e293b', color:'#fff', showConfirmButton:false, timer:2000});
+                
+                try {
+                    const sessionData = await supabaseClient.auth.getSession();
+                    const userId = sessionData.data?.session?.user?.id;
+                    const { data: profile } = await supabaseClient.from('profiles').select('university_id').eq('id', userId).single();
+                    
+                    const { error } = await supabaseClient.from('complaints').insert([{
+                        author_id: userId,
+                        university_id: profile?.university_id,
+                        title: t,
+                        content: b,
+                        category: target,
+                        status: 'approved',
+                        author_role: 'admin',
+                        assigned_level: 'university'
+                    }]);
+                    if (error) throw error;
+
+                    DB.posts.unshift({
+                        id: Date.now(),
+                        title: t,
+                        body: b,
+                        target: target,
+                        interacts: interacts,
+                        comments: comments,
+                        date: new Date().toLocaleDateString()
+                    });
+
+                    Swal.fire({icon:'success', title:'Published Successfully', text: 'Notifying all users...', background:'#1e293b', color:'#fff', showConfirmButton:false, timer:1500});
+                    document.getElementById('post-title').value = '';
+                    document.getElementById('post-body').value = '';
+                    Router.refresh();
+                } catch(e) {
+                    console.error(e);
+                    Swal.fire({toast:true, position:'top-end', icon:'error', title:'Error saving post', background:'#1e293b', color:'#fff', showConfirmButton:false, timer:2000});
+                }
+            },
+            updateSystemLevels: () => {
+                const sys = document.getElementById('set-system').value;
+                const container = document.getElementById('sys-levels-container');
+                if(!container) return;
+                
+                let levels = [];
+                if(sys === 'lmd') levels = ['L1', 'L2', 'L3', 'M1', 'M2', 'PhD'];
+                else if(sys === 'usa') levels = ['Prep Year', 'Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate'];
+                else if(sys === 'classic') levels = ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5', 'Year 6', 'Year 7'];
+                else if(sys === 'schools') levels = ['CP 1 (تحضيري)', 'CP 2', 'CS 1 (تخصص)', 'CS 2', 'CS 3'];
+                else if(sys === 'res') levels = ['Resident R1', 'Resident R2', 'Resident R3', 'Resident R4', 'Resident R5'];
+                else levels = ['Level 1', 'Level 2', 'Level 3', 'Level 4'];
+
+                container.innerHTML = levels.map(l => `<span class="bg-indigo-500/20 text-indigo-300 px-3 py-1.5 rounded-lg text-xs font-bold border border-indigo-500/30 animate-fade-in">${l}</span>`).join('');
+            },
+            toggleAI: () => {
+                DB.settings.aiEnabled = !DB.settings.aiEnabled;
+                const btn = document.getElementById('btn-toggle-ai');
+                const widget = document.getElementById('ai-widget-container');
+                
+                if(DB.settings.aiEnabled) {
+                    btn.classList.replace('bg-red-500/20', 'bg-emerald-500/20');
+                    btn.classList.replace('text-red-400', 'text-emerald-400');
+                    btn.classList.replace('border-red-500/30', 'border-emerald-500/30');
+                    btn.innerHTML = `<i class="fa-solid fa-toggle-on"></i> ${I18n.get('btn_ai_on')}`;
+                    widget.style.display = 'flex';
+                } else {
+                    btn.classList.replace('bg-emerald-500/20', 'bg-red-500/20');
+                    btn.classList.replace('text-emerald-400', 'text-red-400');
+                    btn.classList.replace('border-emerald-500/30', 'border-red-500/30');
+                    btn.innerHTML = `<i class="fa-solid fa-toggle-off"></i> ${I18n.get('btn_ai_off')}`;
+                    widget.style.display = 'none';
+                    UI.closeChat();
+                }
+            },
+            saveSettings: () => {
+                DB.settings.specs = document.getElementById('set-specs').value;
+                DB.settings.system = document.getElementById('set-system').value;
+                
+                Swal.fire({
+                    toast:true, position:'top-end', icon:'success', title:'تم حفظ الإعدادات بنجاح', 
+                    background:'#1e293b', color:'#fff', showConfirmButton:false, timer:2000
+                });
+            },
+            analyzeIssue: async (id) => {
+                if(!DB.settings.aiEnabled) return;
+                const issue = DB.issues.find(i => String(i.id) === String(id));
+                if(!issue) return;
+                const card = document.getElementById(`issue-${id}`);
+                let analysisDiv = document.getElementById(`analysis-${id}`);
+                
+                if(!analysisDiv) {
+                    analysisDiv = document.createElement('div');
+                    analysisDiv.id = `analysis-${id}`;
+                    analysisDiv.className = 'mt-4 p-4 rounded-xl bg-purple-900/20 border border-purple-500/30 text-xs text-slate-300 hidden animate-fade-in';
+                    card.insertBefore(analysisDiv, card.querySelector('.flex.flex-wrap.gap-2.mt-5'));
+                }
+                
+                analysisDiv.classList.remove('hidden');
+                analysisDiv.innerHTML = `<div class="flex items-center gap-2 text-purple-400"><i class="fa-solid fa-spinner fa-spin"></i> ${I18n.get('txt_analyzing')}</div>`;
+                
+                const prompt = `Analyze this university issue:
+                Title: ${issue.title}
+                Description: ${issue.desc}
+                User Role: ${issue.role}
+                
+                Respond in JSON format with exactly these keys:
+                1. "classification": string (either "Technical Issue" or "Student Concern")
+                2. "risk_level": string (Low, Medium, High, or Critical)
+                3. "solution": string (Precise proposed action or solution for the admin)
+                Provide the JSON values translated to this language: ${I18n.current}`;
+                
+                try {
+                    const response = await Gemini.call(prompt, true);
+                    const result = JSON.parse(response);
+                    
+                    const riskColor = (result.risk_level.toLowerCase().includes('high') || result.risk_level.toLowerCase().includes('critical') || result.risk_level.includes('عالي') || result.risk_level.includes('حرج') || result.risk_level.includes('critique') || result.risk_level.includes('élevé')) ? 'text-red-400' : 'text-amber-400';
+
+                    analysisDiv.innerHTML = `
+                        <div class="flex items-center gap-2 mb-3 pb-2 border-b border-purple-500/20"><i class="fa-solid fa-wand-magic-sparkles text-purple-400"></i> <strong class="text-purple-300">Gemini AI Analysis</strong></div>
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <div class="bg-black/30 p-2.5 rounded-lg border border-white/5"><span class="block text-[10px] text-slate-500 mb-1">${I18n.get('class')}</span> <strong class="text-white">${result.classification}</strong></div>
+                            <div class="bg-black/30 p-2.5 rounded-lg border border-white/5"><span class="block text-[10px] text-slate-500 mb-1">${I18n.get('risk')}</span> <strong class="${riskColor}">${result.risk_level}</strong></div>
+                        </div>
+                        <div class="bg-black/30 p-3 rounded-lg border border-white/5"><span class="block text-[10px] text-slate-500 mb-1">${I18n.get('solution')}</span> <span class="text-slate-200 leading-relaxed">${result.solution}</span></div>
+                    `;
+                } catch(e) {
+                    analysisDiv.innerHTML = `<div class="text-red-400 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i> Analysis failed. Please try again.</div>`;
+                }
+            },
+            updateStatus: async (id, status) => {
+                try {
+                    const replyArea = document.getElementById(`admin-reply-${id}`);
+                    const adminReply = replyArea ? replyArea.value.trim() : null;
+
+                    const card = document.getElementById(`issue-${id}`);
+                    if (card) {
+                        card.style.transform = 'scale(0.95)';
+                        card.style.opacity = '0';
+                    }
+
+                    const updatePayload = { status: status };
+                    if (adminReply) updatePayload.admin_reply = adminReply;
+                    
+                    const { error } = await supabaseClient.from('complaints').update(updatePayload).eq('id', id);
+                    if (error) throw error;
+
+                    // Create notification for the complaint author
+                    const issue = DB.issues.find(i => String(i.id) === String(id));
+                    if (issue && issue.author_id) {
+                        const notifMessages = {
+                            approved: { ar: `تمت الموافقة على انشغالك "${issue.title}"`, en: `Your concern "${issue.title}" has been approved`, fr: `Votre préoccupation "${issue.title}" a été approuvée` },
+                            resolved: { ar: `تم حل انشغالك "${issue.title}"`, en: `Your concern "${issue.title}" has been resolved`, fr: `Votre préoccupation "${issue.title}" a été résolue` },
+                            rejected: { ar: `تم رفض انشغالك "${issue.title}"`, en: `Your concern "${issue.title}" has been rejected`, fr: `Votre préoccupation "${issue.title}" a été rejetée` },
+                            temp_solution: { ar: `تم تقديم حل مؤقت لانشغالك "${issue.title}"`, en: `A temporary solution was provided for "${issue.title}"`, fr: `Une solution temporaire a été fournie pour "${issue.title}"` },
+                            needs_info: { ar: `انشغالك "${issue.title}" يحتاج تفاصيل إضافية`, en: `Your concern "${issue.title}" needs more details`, fr: `Votre préoccupation "${issue.title}" nécessite plus de détails` }
+                        };
+                        const msg = notifMessages[status] || { ar: `تم تحديث حالة انشغالك "${issue.title}"`, en: `Your concern "${issue.title}" status updated`, fr: `Statut mis à jour` };
+                        await supabaseClient.from('notifications').insert([{
+                            user_id: issue.author_id,
+                            message: JSON.stringify(msg),
+                            type: status,
+                            complaint_id: id,
+                            is_read: false
+                        }]).then(res => { if(res.error) console.warn('Notification insert warning:', res.error); });
+                    }
+                    
+                    Swal.fire({toast:true, position:'top-end', icon:'success', title:'تم التحديث', background:'#1e293b', color:'#fff', showConfirmButton:false, timer:1500});
+                    DB.syncFromServer();
+                } catch(e) {
+                    console.error(e);
+                    Swal.fire({toast:true, position:'top-end', icon:'error', title:'حدث خطأ', background:'#1e293b', color:'#fff', showConfirmButton:false, timer:1500});
+                }
+            },
+
+            solve: async (id) => {
+                try {
+                    const card = document.getElementById(`issue-${id}`);
+                    if (card) {
+                        card.style.transform = 'scale(0.95)';
+                        card.style.opacity = '0';
+                        setTimeout(() => card.remove(), 300);
+                    }
+                    const idx = DB.issues.findIndex(x => String(x.id) === String(id));
+                    if (idx > -1) DB.issues.splice(idx, 1);
+                    Swal.fire({toast:true, position:'top-end', icon:'success', title:'تم حل المشكلة', background:'#1e293b', color:'#fff', showConfirmButton:false, timer:1500});
+                } catch (err) { console.error('Solve error', err); }
+            },
+            vote: (id) => {
+                const card = document.getElementById(`issue-${id}`);
+                card.style.transform = 'scale(0.95)';
+                card.style.opacity = '0';
+                setTimeout(() => card.remove(), 300);
+                Swal.fire({toast:true, position:'top-end', icon:'info', title:'Voting started', background:'#1e293b', color:'#fff', showConfirmButton:false, timer:1500});
+            },
+            approveT: async (id) => {
+                try {
+                    const card = document.getElementById(`teach-${id}`);
+                    if (card) {
+                        card.style.transform = 'translateX(20px)';
+                        card.style.opacity = '0';
+                        setTimeout(() => card.remove(), 300);
+                    }
+                    const idx = DB.teachers.findIndex(x => String(x.id) === String(id));
+                    if (idx > -1) DB.teachers.splice(idx, 1);
+                    
+                    const reqBadge = document.getElementById('badge-req');
+                    if(reqBadge) {
+                        reqBadge.innerText = DB.teachers.length;
+                        if(DB.teachers.length === 0) reqBadge.classList.add('hidden');
+                    }
+
+                    Swal.fire({toast:true, position:'top-end', icon:'success', title:'تمت الموافقة', background:'#1e293b', color:'#fff', showConfirmButton:false, timer:1500});
+                } catch (err) { console.error('Approve error', err); }
+            }
+        };
+
+        const Voice = {
+            start: (target, btnId) => {
+                if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                    return Swal.fire({icon:'error', text: I18n.get('err_mic'), background:'#1e293b', color:'#fff'});
+                }
+                try {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    const rec = new SpeechRecognition();
+                    const map = { ar: 'ar-SA', en: 'en-US', fr: 'fr-FR' };
+                    rec.lang = map[I18n.current]; 
+                    rec.interimResults = false;
+                    const btn = document.getElementById(btnId);
+                    rec.onstart = () => { if(btn) btn.classList.add('voice-active'); };
+                    rec.onend = () => { if(btn) btn.classList.remove('voice-active'); };
+                    rec.onresult = (e) => {
+                        const txt = e.results[0][0].transcript;
+                        const el = document.getElementById(target);
+                        if(el) { el.value += (el.value ? ' ' : '') + txt; el.focus(); }
+                    };
+                    rec.start();
+                } catch(e) { console.error("Voice Error", e); }
+            }
+        };
+
+        const AI = {
+            ask: (key) => {
+                const prompts = {
+                    summary: { ar: 'أعطني ملخصاً عن جميع الانشغالات الحالية في النظام', en: 'Give me a summary of all current issues in the system', fr: 'Donnez-moi un résumé de tous les problèmes actuels' },
+                    draft: { ar: 'اكتب صياغة لإعلان إداري عن الامتحانات', en: 'Draft an administrative post about exams', fr: 'Rédiger une annonce administrative concernant les examens' },
+                    advice: { ar: 'بماذا تنصحني للتعامل مع المشاكل العاجلة؟', en: 'What do you advise me to handle the urgent issues?', fr: 'Que me conseillez-vous pour gérer les problèmes urgents ?' }
+                };
+                document.getElementById('ai-input').value = prompts[key][I18n.current];
+                AI.send();
+            },
+            send: async () => {
+                const input = document.getElementById('ai-input');
+                const txt = input.value.trim();
+                if(!txt) return;
+                
+                AI.append(txt, 'user');
+                input.value = '';
+                
+                const typingId = 'typing-' + Date.now();
+                setTimeout(() => {
+                    AI.append('<span id="'+typingId+'" class="flex gap-1 items-center"><span class="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></span><span class="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce delay-100"></span><span class="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce delay-200"></span></span>', 'ai');
+                }, 100);
+
+                try {
+                    const dbContext = JSON.stringify(DB.issues.map(i => ({ title: i.title, role: i.role, status: i.status })));
+                    const sysPrompt = `You are Atlas, a smart university administration assistant (version 11.4). You are connected to the live database. The current active concerns in the database are: ${dbContext}. Provide concise, professional, and helpful answers. Respond in the language of the user's prompt (usually Arabic, English, or French). Format your text with simple markdown.`;
+                    
+                    const responseText = await Gemini.call(txt, false, sysPrompt);
+                    
+                    const el = document.getElementById(typingId);
+                    if(el && el.parentElement) el.parentElement.remove();
+                    
+                    AI.append(marked.parse(responseText), 'ai');
+                } catch (error) {
+                    const el = document.getElementById(typingId);
+                    if(el && el.parentElement) el.parentElement.remove();
+                    AI.append("<span class='text-red-400'>Error connecting to Gemini Engine.</span>", 'ai');
+                }
+            },
+            append: (html, role) => {
+                const box = document.getElementById('chat-messages');
+                const style = role === 'user' ? 'bg-indigo-600 text-white self-end rounded-br-none' : 'bg-slate-800 text-slate-200 self-start rounded-bl-none border border-white/5 prose prose-invert prose-sm max-w-none';
+                const div = document.createElement('div');
+                div.className = `max-w-[85%] p-3 rounded-2xl text-xs leading-relaxed shadow-md animate-fade-in ${style} ${role === 'user' ? 'ml-auto' : 'mr-auto'}`;
+                div.innerHTML = html;
+                
+                div.querySelectorAll('p').forEach(p => p.classList.add('mb-2', 'last:mb-0'));
+                div.querySelectorAll('strong').forEach(s => s.classList.add('text-indigo-300'));
+                div.querySelectorAll('ul').forEach(ul => ul.classList.add('list-disc', 'pl-4', 'rtl:pr-4', 'mb-2'));
+                
+                box.appendChild(div);
+                box.scrollTop = box.scrollHeight;
+            }
+        };
+
+        const UI = {
+            toggleSidebar: () => {
+                const s = document.getElementById('sidebar');
+                const o = document.getElementById('mobile-overlay');
+                
+                const isHidden = s.classList.contains('ltr:-translate-x-full') || s.classList.contains('rtl:translate-x-full') || s.classList.contains('-translate-x-full');
+                
+                if (isHidden) {
+                    s.classList.remove('ltr:-translate-x-full', 'rtl:translate-x-full', '-translate-x-full');
+                    o.classList.remove('hidden');
+                } else {
+                    s.classList.add('ltr:-translate-x-full', 'rtl:translate-x-full');
+                    o.classList.add('hidden');
+                }
+            },
+            closeSidebar: () => {
+                const s = document.getElementById('sidebar');
+                const o = document.getElementById('mobile-overlay');
+                s.classList.add('ltr:-translate-x-full', 'rtl:translate-x-full');
+                o.classList.add('hidden');
+            },
+            toggleChat: () => {
+                if(!DB.settings.aiEnabled) return;
+                const c = document.getElementById('atlas-window');
+                const h = c.classList.contains('closed');
+                if(h) {
+                    c.classList.remove('closed');
+                    c.classList.add('open');
+                    const msgContainer = document.getElementById('chat-messages');
+                    if(msgContainer.children.length === 0) setTimeout(() => AI.append(I18n.get('ai_welcome'), 'ai'), 400);
+                    setTimeout(() => document.getElementById('ai-input').focus(), 500);
+                } else {
+                    UI.closeChat();
+                }
+            },
+            closeChat: () => {
+                const c = document.getElementById('atlas-window');
+                c.classList.remove('open');
+                c.classList.add('closed');
+            },
+            showMedia: (u) => {
+                document.getElementById('media-img').src = u;
+                document.getElementById('media-modal').classList.remove('hidden');
+                setTimeout(() => document.getElementById('media-modal').classList.remove('opacity-0'), 10);
+            },
+            closeMedia: () => {
+                const m = document.getElementById('media-modal');
+                m.classList.add('opacity-0');
+                setTimeout(() => { m.classList.add('hidden'); document.getElementById('media-img').src = ''; }, 300);
+            }
+        };
+
+        const Auth = {
+            logout: () => Swal.fire({ title: 'Signing out...', timer: 800, showConfirmButton: false, background: '#1e293b', color:'#fff', didOpen: () => Swal.showLoading() }).then(() => location.reload())
+        };
+
+        window.onload = async () => {
+            Router.go('home');
+            await DB.syncFromServer();
+            
+            document.addEventListener('click', (e) => {
+                const menu = document.getElementById('lang-menu');
+                const wrapper = document.getElementById('lang-dropdown-wrapper');
+                if (menu && wrapper && !wrapper.contains(e.target)) {
+                    menu.classList.add('hidden');
+                }
+            });
+        };
+    </script>
+</body>
+</html>

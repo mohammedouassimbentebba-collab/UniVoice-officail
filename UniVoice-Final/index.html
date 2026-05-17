@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="University AI Portal - Powered by Atlas System">
+    <title>تسجيل الدخول | فضاء الانشغالات</title>
+
+    <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Supabase JS (used for university request submission) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
+    <!-- Optional runtime config generated from .env (create public/config.js via scripts/generate-config.js) -->
+    <script src="config.js"></script>
+
+    <!-- Tailwind Config with Cyan -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                        poppins: ['Poppins', 'sans-serif'],
+                    },
+                    colors: {
+                        cyan: { 400: '#22d3ee', 500: '#06b6d4', 600: '#0891b2' },
+                        purple: { 600: '#9333ea' }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'grid-move': 'gridMove 20s linear infinite',
+                        'blob': 'blob 7s infinite',
+                        'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
+                        'bounce-slight': 'bounceSlight 2s infinite',
+                    },
+                    keyframes: {
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        },
+                        gridMove: {
+                            '0%': { backgroundPosition: '0 0' },
+                            '100%': { backgroundPosition: '50px 50px' },
+                        },
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        bounceSlight: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-3px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg-master: #f0f9ff;
+            --glass-bg: rgba(255, 255, 255, 0.9);
+            --glass-border: rgba(34, 211, 238, 0.3);
+            --accent-cyan: #06b6d4;
+            --accent-purple: #9333ea;
+            --perspective: 2000px;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background-color: var(--bg-master);
+            color: #1e293b;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            overflow-y: auto;
+            font-family: 'Cairo', sans-serif;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        /* --- Alive Background --- */
+        .bg-grid {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: linear-gradient(rgba(6, 182, 212, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(6, 182, 212, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px; z-index: -2; animation: grid-move 60s linear infinite;
+        }
+        .bg-blobs { position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: -1; pointer-events: none; }
+        .blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.6; animation: blob 10s infinite cubic-bezier(0.2, 0.8, 0.2, 1); }
+        
+        html[dir="ltr"] body { font-family: 'Poppins', sans-serif; }
+
+        .scene-container { width: 100%; max-width: 420px; padding: 20px; z-index: 10; perspective: 2000px; margin: auto; display: flex; justify-content: center; }
+
+        /* --- Tilt Card --- */
+        .tilt-card {
+            background: var(--glass-bg); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px);
+            border: 1px solid var(--glass-border); border-top: 1px solid rgba(255, 255, 255, 0.95);
+            border-radius: 24px;
+            box-shadow: 0 20px 40px -10px rgba(6, 182, 212, 0.25), 0 0 20px rgba(147, 51, 234, 0.1);
+            transform-style: preserve-3d; transition: transform 0.1s ease-out; position: relative; width: 100%; will-change: transform;
+        }
+
+        /* Inputs */
+        .input-group { position: relative; margin-bottom: 1rem; }
+        .atlas-input {
+            width: 100%; background: rgba(255, 255, 255, 0.6); border: 1px solid #cffafe;
+            border-radius: 12px; padding: 12px 14px; color: #334155; font-size: 0.9rem; transition: all 0.3s;
+        }
+        html[dir="rtl"] .atlas-input { padding-right: 44px; padding-left: 14px; }
+        html[dir="ltr"] .atlas-input { padding-left: 44px; padding-right: 14px; }
+        .atlas-input:focus { background: #fff; border-color: var(--accent-cyan); box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.2); outline: none; }
+        .input-icon { position: absolute; top: 0; bottom: 0; width: 44px; display: flex; align-items: center; justify-content: center; color: #22d3ee; pointer-events: none; }
+        html[dir="rtl"] .input-icon { right: 0; }
+        html[dir="ltr"] .input-icon { left: 0; }
+
+        /* Buttons */
+        .btn-primary {
+            background: linear-gradient(135deg, #06b6d4, #8b5cf6); color: white; font-weight: 700;
+            padding: 12px; border-radius: 12px; width: 100%; border: none; transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);
+        }
+        .btn-primary:hover { box-shadow: 0 6px 25px rgba(139, 92, 246, 0.5); transform: translateY(-2px); filter: brightness(1.1); }
+
+        .btn-secondary {
+            width: 100%; padding: 10px; background: rgba(255, 255, 255, 0.6);
+            border: 2px dashed rgba(6, 182, 212, 0.3); border-radius: 12px; color: #0891b2; font-size: 0.85rem; font-weight: 600; transition: all 0.3s;
+        }
+        .btn-secondary:hover { background: rgba(236, 254, 255, 0.8); border-color: var(--accent-cyan); color: var(--accent-cyan); }
+
+        /* Role Switcher */
+        .role-switch {
+            background: rgba(255, 255, 255, 0.5); border: 1px solid rgba(34, 211, 238, 0.3);
+            border-radius: 14px; padding: 4px; display: flex; position: relative; margin-bottom: 1.5rem;
+        }
+        .role-indicator {
+            position: absolute; top: 4px; bottom: 4px; width: calc(50% - 4px);
+            background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(6, 182, 212, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 0;
+        }
+        html[dir="rtl"] .role-indicator.student { right: 4px; left: auto; }
+        html[dir="rtl"] .role-indicator.teacher { right: 50%; left: auto; }
+        html[dir="ltr"] .role-indicator.student { left: 4px; right: auto; }
+        html[dir="ltr"] .role-indicator.teacher { left: 50%; right: auto; }
+
+        .role-btn {
+            flex: 1; position: relative; z-index: 1; font-size: 0.8rem; font-weight: 700;
+            padding: 8px; text-align: center; cursor: pointer; transition: color 0.3s; border-radius: 10px;
+        }
+        .role-btn.active { color: var(--accent-cyan); }
+        .role-btn:not(.active) { color: #64748b; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999;
+            background: rgba(15, 23, 42, 0.4); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+            display: grid; place-items: center; padding: 20px; opacity: 0; visibility: hidden;
+            transition: all 0.3s ease; transform: translateZ(0);
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content {
+            background: #ffffff; width: 100%; max-width: 500px; border-radius: 24px;
+            border: 1px solid rgba(34, 211, 238, 0.4); box-shadow: 0 25px 50px -12px rgba(6, 182, 212, 0.25);
+            transform: scale(0.95); transition: all 0.3s; display: flex; flex-direction: column;
+            max-height: 85vh; overflow: hidden; position: relative;
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .modal-body {
+            padding: 1.5rem; overflow-y: auto;
+        }
+        .modal-body::-webkit-scrollbar { width: 8px; }
+        .modal-body::-webkit-scrollbar-track { background: #ecfeff; border-radius: 4px; }
+        .modal-body::-webkit-scrollbar-thumb { background: linear-gradient(to bottom, #22d3ee, #06b6d4); border-radius: 4px; border: 1px solid #fff; }
+
+        /* Lang Pill */
+        .lang-pill {
+            position: fixed; top: 20px; left: 20px; z-index: 50; background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #cffafe; padding: 4px; border-radius: 100px; display: flex;
+            box-shadow: 0 4px 6px -1px rgba(6, 182, 212, 0.1);
+        }
+        html[dir="ltr"] .lang-pill { left: auto; right: 20px; }
+        .lang-item { padding: 4px 12px; font-size: 0.75rem; font-weight: 700; color: #64748b; border-radius: 100px; transition: 0.3s; cursor: pointer; }
+        .lang-item.active { background: var(--accent-cyan); color: white; }
+
+        /* Important Note */
+        .important-note {
+            background: #fff1f2; border-inline-start: 4px solid #f43f5e; color: #9f1239;
+            padding: 12px; border-radius: 12px; margin-bottom: 20px; font-size: 0.75rem;
+            display: flex; gap: 8px; align-items: flex-start; line-height: 1.6;
+            box-shadow: 0 4px 10px rgba(244, 63, 94, 0.1); font-weight: 500;
+            position: relative; z-index: 10; transform: translateZ(25px);
+        }
+
+        .logo-group { transform: translateZ(20px); }
+        .form-wrapper { transform: translateZ(30px); }
+
+        /* AI Result Card - New Style */
+        #ai-result-container { max-height: 0; opacity: 0; overflow: hidden; transition: all 0.5s ease-out; transform: translateZ(28px); }
+        #ai-result-container.active { max-height: 250px; opacity: 1; margin-bottom: 1.5rem; }
+        
+        .result-card {
+            background: linear-gradient(145deg, #ffffff, #f0f9ff);
+            border: 1px solid #cffafe; border-radius: 18px; padding: 15px;
+            box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.15); position: relative;
+        }
+        .result-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .result-avatar { 
+            width: 32px; height: 32px; background: #06b6d4; color: white; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem;
+        }
+        .result-name { font-weight: 800; color: #1e293b; font-size: 0.95rem; }
+        .result-role { background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 10px; font-size: 0.65rem; font-weight: bold; }
+        .result-wisdom { 
+            font-size: 0.8rem; color: #475569; background: #f8fafc; padding: 10px; border-radius: 12px;
+            border-right: 3px solid #a855f7; font-style: italic; line-height: 1.5;
+        }
+        html[dir="ltr"] .result-wisdom { border-right: none; border-left: 3px solid #a855f7; }
+    </style>
+</head>
+
+<body class="antialiased">
+
+    <!-- Background -->
+    <div class="bg-grid"></div>
+    <div class="bg-blobs">
+        <div class="blob bg-cyan-400 w-96 h-96 top-0 left-0 mix-blend-multiply filter blur-xl opacity-30 animate-blob"></div>
+        <div class="blob bg-purple-400 w-96 h-96 top-0 right-0 mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-2000"></div>
+        <div class="blob bg-blue-400 w-96 h-96 -bottom-8 left-20 mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-4000"></div>
+    </div>
+
+    <!-- Language Controls -->
+    <div class="lang-pill">
+        <button onclick="setLanguage('ar')" id="btn-ar" class="lang-item active">AR</button>
+        <button onclick="setLanguage('en')" id="btn-en" class="lang-item">EN</button>
+        <button onclick="setLanguage('fr')" id="btn-fr" class="lang-item">FR</button>
+    </div>
+
+    <!-- Main Scene -->
+    <div class="scene-container">
+        <div id="login-card" class="tilt-card p-8 flex flex-col">
+
+            <!-- Logo -->
+            <div class="text-center mb-6 relative z-10 logo-group">
+                <!-- Conference Welcome -->
+                <div class="mb-4 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl p-4 shadow-sm inline-block">
+                    <div class="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow mx-auto mb-2">NUIF</div>
+                    <h2 class="text-xs md:text-sm font-bold text-indigo-900 leading-relaxed">
+                        منصة UniVoice - النسخة الخاصة بالمنتدى الوطني للابتكار الجامعي NUIF<br>
+                        <span class="text-purple-600 font-black text-[10px]">جامعة باتنة 2 | نادي عقول النهضة (RMC)</span>
+                    </h2>
+                </div>
+
+                <div class="relative inline-flex group">
+                    <div class="relative w-24 h-24 mx-auto bg-white rounded-3xl border border-cyan-100 flex items-center justify-center shadow-lg shadow-cyan-500/10 overflow-hidden p-2">
+                        <div class="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow">NUIF</div>
+                    </div>
+                </div>
+                <h1 data-key="title" class="text-2xl font-bold text-slate-800 mt-4 tracking-tight">فضاء الانشغالات</h1>
+                <p data-key="subtitle" class="text-[11px] text-cyan-600 font-bold uppercase tracking-widest mt-1">نسخة المؤتمر (Production-Ready)</p>
+            </div>
+
+            <!-- Important Note (Updated) -->
+            <div class="important-note">
+                <i class="fas fa-triangle-exclamation mt-0.5 shrink-0 animate-bounce-slight"></i>
+                <div data-key="alert_msg">
+                    تنبيه هام: إذا لم تكن جامعتك مدرجة، فلن تستطيع تسجيل الدخول. يجب على مدير جامعتك التسجيل أولاً ليتم إدراج الجامعة في النظام.
+                </div>
+            </div>
+
+            <!-- Role Switcher -->
+            <div class="role-switch relative z-20">
+                <div id="role-indicator" class="role-indicator student"></div>
+                <button onclick="setRole('student')" id="role-btn-student" class="role-btn active" data-key="role_student">
+                    <i class="fas fa-user-graduate mr-1"></i> طالب
+                </button>
+                <button onclick="setRole('teacher')" id="role-btn-teacher" class="role-btn" data-key="role_teacher">
+                    <i class="fas fa-chalkboard-user mr-1"></i> أستاذ
+                </button>
+            </div>
+
+            <!-- AI Result Container (ABOVE EMAIL) -->
+            <div id="ai-result-container" class="relative z-10 mb-4">
+                <!-- Dynamic Content Here -->
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="space-y-4 relative z-10 form-wrapper">
+                
+                <!-- Email -->
+                <div>
+                    <div class="flex justify-between items-end mb-1.5 px-1">
+                        <label id="lbl-email" data-key="email_label" class="text-[12px] text-slate-600 font-bold block">البريد الجامعي للطالب</label>
+                        <button type="button" onclick="analyzeEmail()" class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-cyan-50 hover:bg-cyan-100 text-[10px] text-cyan-700 border border-cyan-200 transition-all hover:scale-105 active:scale-95">
+                            <i class="fas fa-wand-magic-sparkles"></i>
+                            <span data-key="analyze_btn">تحليل ذكي</span>
+                        </button>
+                    </div>
+                    <div class="input-group">
+                                <input type="email" id="email" name="email" class="atlas-input" placeholder="id.student@univ.edu" dir="ltr" autocomplete="email" required>
+                        <div class="input-icon"><i class="fas fa-envelope"></i></div>
+                    </div>
+                </div>
+
+                <!-- Password -->
+                <div>
+                    <label data-key="pass_label" class="text-[12px] text-slate-600 font-bold mb-1.5 block px-1">كلمة المرور</label>
+                    <div class="input-group">
+                        <input type="password" id="password" name="password" class="atlas-input" placeholder="••••••••••••" dir="ltr" autocomplete="current-password" required>
+                        <div class="input-icon"><i class="fas fa-lock"></i></div>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center text-[11px] text-slate-500 px-1">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="remember" class="accent-cyan-500 w-3.5 h-3.5">
+                        <span data-key="remember">تذكرني</span>
+                    </label>
+                    <a href="#" data-key="forgot" class="hover:text-cyan-600 transition-colors">نسيت الرمز؟</a>
+                </div>
+
+                <button type="submit" class="btn-primary">
+                    <span data-key="login_btn">تسجيل الدخول</span>
+                </button>
+            </form>
+
+            <!-- Divider -->
+            <div class="relative my-6 relative z-10">
+                <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-cyan-100"></div></div>
+                <div class="relative flex justify-center"><span data-key="or_text" class="bg-white/80 px-3 text-[10px] text-cyan-400 font-bold">أو</span></div>
+            </div>
+
+            <!-- Join Button -->
+            <button onclick="toggleModal(true)" class="btn-secondary group relative z-10">
+                <i class="fas fa-building-columns group-hover:text-cyan-600 transition-colors"></i>
+                <span data-key="join_btn">انضم كجامعة</span>
+            </button>
+
+        </div>
+    </div>
+
+    <!-- Registration Modal -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal-content">
+            <div class="p-5 border-b border-cyan-100 flex justify-between items-center bg-cyan-50/50 rounded-t-3xl shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-cyan-100 flex items-center justify-center text-cyan-600"><i class="fas fa-file-contract"></i></div>
+                    <div>
+                        <h2 data-key="modal_title" class="text-sm font-bold text-slate-800">طلب انضمام مؤسسة</h2>
+                        <p class="text-[9px] text-cyan-600 font-medium">PARTNERSHIP REQUEST</p>
+                    </div>
+                </div>
+                <button onclick="toggleModal(false)" class="w-8 h-8 rounded-full bg-white hover:bg-red-50 text-slate-400 hover:text-red-500 transition flex items-center justify-center shadow-sm"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Updated Note -->
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 flex gap-3 text-blue-800 mb-4">
+                    <i class="fas fa-envelope-circle-check mt-0.5 text-xs"></i>
+                    <p data-key="modal_note" class="text-[11px] leading-relaxed">تنبيه: سيتم التواصل معكم عبر البريد الإلكتروني حصراً. يرجى ملء البيانات بدقة لضمان سرعة معالجة الطلب.</p>
+                </div>
+
+                <form id="univ-request-form" class="space-y-4">
+                    <div>
+                        <label data-key="field_univ_name" class="block text-[11px] text-slate-500 mb-1 font-bold">اسم الجامعة الرسمي</label>
+                        <input type="text" id="univ-name" name="univ_name" class="atlas-input" required>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label data-key="field_country" class="block text-[11px] text-slate-500 mb-1 font-bold">الدولة</label>
+                            <select id="country-select" name="country" class="atlas-input bg-white appearance-none"><option value="">اختر الدولة...</option></select>
+                        </div>
+                        <div>
+                            <label data-key="field_students" class="block text-[11px] text-slate-500 mb-1 font-bold">عدد الطلاب</label>
+                            <input type="number" id="student-count" name="student_count" class="atlas-input" placeholder="e.g. 5000">
+                        </div>
+                    </div>
+                    <div>
+                        <label data-key="field_official_email" class="block text-[11px] text-slate-500 mb-1 font-bold">النطاق الرسمي</label>
+                        <div class="input-group mb-0">
+                            <input type="text" id="official-email" name="official_email" class="atlas-input" placeholder="admin@univ.edu" dir="ltr">
+                            <div class="input-icon"><i class="fas fa-globe text-xs"></i></div>
+                        </div>
+                    </div>
+                    <div class="border-t border-cyan-100 my-4"></div>
+                    <h3 data-key="sec_contact" class="text-xs font-bold text-cyan-700 mb-3">بيانات الممثل</h3>
+                    <div>
+                        <label data-key="field_rep_name" class="block text-[11px] text-slate-500 mb-1 font-bold">الاسم الكامل</label>
+                        <input type="text" id="rep-name" name="rep_name" class="atlas-input" placeholder="د. محمد">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label data-key="field_phone" class="block text-[11px] text-slate-500 mb-1 font-bold">رقم الهاتف</label>
+                            <div class="input-group mb-0">
+                                <input type="tel" id="rep-phone" name="rep_phone" class="atlas-input" placeholder="+123..." dir="ltr">
+                                <div class="input-icon"><i class="fas fa-phone text-xs"></i></div>
+                            </div>
+                        </div>
+                        <div>
+                            <label data-key="field_personal_email" class="block text-[11px] text-slate-500 mb-1 font-bold">البريد الشخصي</label>
+                            <div class="input-group mb-0">
+                                <input type="email" id="rep-email" name="rep_email" class="atlas-input" placeholder="gmail..." dir="ltr">
+                                <div class="input-icon"><i class="fas fa-at text-xs"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-bold py-3.5 rounded-xl shadow-lg mt-2 text-sm hover:shadow-xl transition-all group">
+                        <span data-key="modal_submit">إرسال طلب الانضمام</span>
+                        <i class="fas fa-paper-plane px-2 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        let currentRole = 'student';
+
+        const translations = {
+            ar: {
+                title: "فضاء الانشغالات", subtitle: "نظام أطلس الذكي V5.0",
+                alert_msg: "تنبيه هام: إذا لم تكن جامعتك مدرجة، فلن تستطيع تسجيل الدخول. يجب على مدير الجامعة التسجيل أولاً ليتم إدراج الجامعة في النظام.",
+                email_label: "البريد الجامعي للطالب",
+                email_label_student: "البريد الجامعي للطالب",
+                email_label_teacher: "البريد المهني للأستاذ",
+                role_student: "طالب", role_teacher: "أستاذ",
+                analyze_btn: "تحليل ذكي", pass_label: "كلمة المرور", remember: "تذكرني", forgot: "نسيت الرمز؟", login_btn: "تسجيل الدخول", or_text: "أو", join_btn: "انضم كجامعة",
+                modal_title: "طلب انضمام مؤسسة",
+                modal_note: "تنبيه: سيتم التواصل معكم عبر البريد الإلكتروني حصراً. يرجى ملء البيانات بدقة لضمان سرعة معالجة الطلب.",
+                field_univ_name: "اسم الجامعة الرسمي", field_country: "الدولة", field_students: "عدد الطلاب", field_official_email: "النطاق الرسمي", sec_contact: "بيانات الممثل", field_rep_name: "الاسم الكامل", field_phone: "رقم الهاتف", field_personal_email: "البريد الشخصي", modal_submit: "إرسال طلب الانضمام",
+                welcome_msg: "أهلاً بك،"
+            },
+            en: {
+                title: "Concerns Space", subtitle: "Atlas Smart System V5.0",
+                alert_msg: "Important: If your university is not listed, you cannot login. Your university director must register first to be listed.",
+                email_label: "Student Email",
+                email_label_student: "Student Email",
+                email_label_teacher: "Professor Email",
+                role_student: "Student", role_teacher: "Professor",
+                analyze_btn: "Smart AI", pass_label: "Password", remember: "Remember me", forgot: "Forgot Password?", login_btn: "Login", or_text: "OR", join_btn: "Join as University",
+                modal_title: "Partnership Request",
+                modal_note: "Notice: We will contact you via email only. Please fill in the data accurately to ensure fast processing.",
+                field_univ_name: "Official University Name", field_country: "Country", field_students: "Student Count", field_official_email: "Official Domain", sec_contact: "Representative Info", field_rep_name: "Full Name", field_phone: "Phone Number", field_personal_email: "Personal Email", modal_submit: "Submit Request",
+                welcome_msg: "Welcome,"
+            },
+            fr: {
+                title: "Espace Préoccupations", subtitle: "Système Atlas V5.0",
+                alert_msg: "Important : Si votre université n'est pas listée, vous ne pouvez pas vous connecter. Votre directeur doit d'abord inscrire l'université.",
+                email_label: "Email Étudiant",
+                email_label_student: "Email Étudiant",
+                email_label_teacher: "Email Professeur",
+                role_student: "Étudiant", role_teacher: "Professeur",
+                analyze_btn: "Analyse IA", pass_label: "Mot de passe", remember: "Se souvenir", forgot: "Mot de passe oublié?", login_btn: "Connexion", or_text: "OU", join_btn: "Rejoindre",
+                modal_title: "Demande Partenariat",
+                modal_note: "Avis : Nous vous contacterons uniquement par e-mail. Veuillez remplir les données avec précision.",
+                field_univ_name: "Nom Officiel", field_country: "Pays", field_students: "Nombre d'étudiants", field_official_email: "Domaine Officiel", sec_contact: "Représentant", field_rep_name: "Nom Complet", field_phone: "Numéro", field_personal_email: "Email Personnel", modal_submit: "Envoyer",
+                welcome_msg: "Bienvenue,"
+            }
+        };
+
+        const wisdoms = {
+            ar: ["العلم كنز.", "التعليم سلاح.", "الذكاء تكيف."],
+            en: ["Knowledge is power.", "Education is key.", "Adapt to change."],
+            fr: ["Le savoir est une arme.", "L'éducation est la clé.", "L'intelligence est l'adaptation."]
+        };
+
+        function setRole(role) {
+            currentRole = role;
+            const lang = document.documentElement.lang || 'ar';
+            const data = translations[lang];
+            
+            document.getElementById('role-indicator').className = `role-indicator ${role}`;
+            document.getElementById('role-btn-student').classList.toggle('active', role === 'student');
+            document.getElementById('role-btn-teacher').classList.toggle('active', role === 'teacher');
+            
+            document.getElementById('lbl-email').innerText = role === 'student' ? data.email_label_student : data.email_label_teacher;
+            document.getElementById('email').placeholder = role === 'student' ? "id.student@univ.edu" : "prof.name@univ.edu";
+        }
+
+        function setLanguage(lang) {
+            document.documentElement.lang = lang;
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+            
+            document.querySelectorAll('.lang-item').forEach(btn => {
+                btn.classList.toggle('active', btn.id === `btn-${lang}`);
+            });
+
+            const data = translations[lang];
+            document.querySelectorAll('[data-key]').forEach(el => {
+                const key = el.getAttribute('data-key');
+                if (data[key]) el.innerHTML = data[key];
+            });
+            setRole(currentRole); // Refresh role labels
+        }
+
+        // Countries logic
+        const countries = ["الجزائر", "مصر", "السعودية", "الإمارات", "المغرب", "تونس", "Other"];
+        const countrySelect = document.getElementById('country-select');
+        countries.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c; opt.textContent = c;
+            countrySelect.appendChild(opt);
+        });
+
+        async function analyzeEmail() {
+            const email = document.getElementById('email').value;
+            const container = document.getElementById('ai-result-container');
+            const lang = document.documentElement.lang || 'ar';
+            
+            container.innerHTML = `<div class="flex justify-center py-4"><div class="w-6 h-6 border-2 border-cyan-400 rounded-full animate-spin border-t-transparent"></div></div>`;
+            container.classList.add('active');
+
+            if (!email || !email.includes('@')) {
+                setTimeout(() => container.innerHTML = `<div class="bg-red-50 text-red-500 p-2 text-center rounded text-xs font-bold">Invalid Email</div>`, 500);
+                return;
+            }
+
+            const namePart = email.split('@')[0].replace('.', ' ');
+            const name = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+            const wList = wisdoms[lang];
+            const wisdom = wList[Math.floor(Math.random() * wList.length)];
+            const welcome = translations[lang].welcome_msg;
+            const roleText = currentRole === 'student' ? (lang==='ar'?'طالب':'Student') : (lang==='ar'?'أستاذ':'Professor');
+
+            setTimeout(() => {
+                container.innerHTML = `
+                <div class="result-card animate-fade-in-up">
+                    <div class="result-header justify-center">
+                        <div class="result-avatar">${name.charAt(0)}</div>
+                        <div class="text-start">
+                            <div class="result-name">${name}</div>
+                            <span class="result-role">${roleText}</span>
+                        </div>
+                    </div>
+                    <div class="result-wisdom">"${wisdom}"</div>
+                </div>`;
+            }, 800);
+        }
+
+        // Tilt Effect
+        const card = document.getElementById('login-card');
+        let cx = 0, cy = 0, tx = 0, ty = 0;
+        document.addEventListener('mousemove', e => {
+            cx = (e.clientX - window.innerWidth/2);
+            cy = (e.clientY - window.innerHeight/2);
+        });
+        function animate() {
+            tx += (cx/35 - tx) * 0.05;
+            ty += (cy/35 - ty) * 0.05;
+            if(card) card.style.transform = `rotateX(${-ty}deg) rotateY(${tx}deg)`;
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        function toggleModal(show) {
+            const m = document.getElementById('modal-overlay');
+            if (show) { m.classList.add('active'); document.body.style.overflow = 'hidden'; }
+            else { m.classList.remove('active'); document.body.style.overflow = 'auto'; }
+        }
+
+        // --- Utility: escape HTML to prevent XSS when inserting user content into DOM ---
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>"'\/]/g, function (s) {
+                return ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;',
+                    '/': '&#x2F;'
+                })[s];
+            });
+        }
+
+        // ربط النموذج بالدالة - Wrapper Supabase login
+        (function attachLoginHandler() {
+            const form = document.getElementById('login-form');
+            if (!form) return;
+
+            form.addEventListener('submit', async function (event) {
+                event.preventDefault(); // لمنع تحديث الصفحة عند الضغط
+
+                // --- بداية كود الذكاء الاصطناعي ---
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+
+                if (!email || !password) {
+                    alert("الرجاء ملء جميع الحقول");
+                    return;
+                }
+
+                if (!supabaseClient) {
+                    alert('Supabase غير مُهيأ. يرجى ضبط الإعدادات في config.js');
+                    return;
+                }
+
+                // 2. تسجيل الدخول عبر Supabase
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) {
+                    alert("خطأ في الدخول: " + (error.message || JSON.stringify(error)));
+                    return;
+                }
+
+                // 3. جلب الرتبة واللغة المفضلة (Role + preferred_language)
+                const userId = data.user.id;
+
+                const { data: profileData, error: profileError } = await supabaseClient
+                    .from('profiles')
+                    .select('role, preferred_language')
+                    .eq('id', userId)
+                    .single();
+
+                if (profileError) {
+                    alert("حدث خطأ أثناء جلب بيانات المستخدم.");
+                    console.error(profileError);
+                    return;
+                }
+
+                // حفظ اللغة في ذاكرة المتصفح (ليأخذها باقي الصفحات)
+                const preferredLang = (profileData && profileData.preferred_language) ? profileData.preferred_language : 'ar';
+                localStorage.setItem('site_language', preferredLang);
+
+                // تطبيق اللغة فوراً على الصفحة الحالية إن وُجدت الدالة (يمكّن الترجمة قبل التوجيه)
+                if (typeof setLanguage === 'function') {
+                    try { setLanguage(preferredLang); } catch (e) { console.warn('setLanguage failed', e); }
+                }
+
+                // --- Smart name extraction (store temp_student_name) ---
+                try {
+                    const raw = (email || '').split('@')[0] || '';
+                    let formatted = raw.replace(/[._]+/g, ' ').trim();
+                    formatted = formatted
+                        .split(/\s+/)
+                        .map(w => w ? (w.charAt(0).toUpperCase() + w.slice(1)) : '')
+                        .join(' ');
+                    if (formatted.length >= 1) localStorage.setItem('temp_student_name', formatted);
+                } catch (e) { console.warn('Name extraction failed', e); }
+
+                // 4. التوجيه (Routing)
+                const role = profileData.role;
+
+                if (role === 'student') {
+                    window.location.href = 'student.html';
+                } else if (role === 'teacher') {
+                    window.location.href = 'teacher.html';
+                } else if (role === 'super_admin' || role === 'university_admin') {
+                    window.location.href = 'admin.html';
+                } else {
+                    alert("حسابك لا يملك صلاحية معروفة!");
+                }
+
+                // --- نهاية كود الذكاء الاصطناعي ---
+            });
+        })();
+
+        // University request submission using Supabase
+        // Read Supabase runtime config from `window.APP_CONFIG` (generated by scripts/generate-config.js)
+        const SUPABASE_URL = (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_URL) || '';
+        const SUPABASE_ANON_KEY = (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_ANON_KEY) || '';
+        let supabaseClient = null;
+        try {
+            if (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase && typeof window.supabase.createClient === 'function') {
+                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            } else {
+                supabaseClient = null; // not configured or running without client keys
+            }
+        } catch (err) {
+            console.warn('Supabase client not initialized:', err);
+            supabaseClient = null;
+        }
+
+        async function submitUniversityRequest() {
+            // read values
+            const name = document.getElementById('univ-name').value.trim();
+            const country = document.getElementById('country-select').value;
+            const studentCount = document.getElementById('student-count').value;
+            const domain = document.getElementById('official-email').value.trim();
+            const repName = document.getElementById('rep-name').value.trim();
+            const phone = document.getElementById('rep-phone').value.trim();
+            const repEmail = document.getElementById('rep-email').value.trim();
+
+            if (!name || !domain || !repEmail) {
+                alert('يرجى ملء الحقول المطلوبة (الاسم، النطاق، البريد الشخصي).');
+                return;
+            }
+
+            // show processing message
+            alert('جاري معالجة الطلب...');
+
+            if (!supabaseClient) {
+                // If supabase is not configured, just notify user and stop.
+                alert('لم يتم تكوين Supabase. يرجى ضبط SUPABASE_URL و SUPABASE_ANON_KEY في الشفرة.');
+                return;
+            }
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('university_requests')
+                    .insert([
+                        {
+                            university_name: name,
+                            country: country,
+                            student_count: studentCount || null,
+                            domain: domain,
+                            official_email: repEmail,
+                            phone_number: phone,
+                            contact_person: repName,
+                            message: 'طلب انضمام عبر صفحة index'
+                        }
+                    ]);
+
+                if (error) {
+                    console.error('Supabase insert error:', error);
+                    alert('حدث خطأ أثناء إرسال الطلب، حاول مرة أخرى لاحقاً.');
+                } else {
+                    alert('تم استلام طلبكم! سيتواصل معكم المدير قريباً.');
+                    // close modal
+                    toggleModal(false);
+                    // reset form
+                    document.getElementById('univ-request-form').reset();
+                }
+            } catch (ex) {
+                console.error(ex);
+                alert('حدث خطأ غير متوقع.');
+            }
+        }
+
+        // wire form submit to Supabase function
+        const univForm = document.getElementById('univ-request-form');
+        if (univForm) {
+            univForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                submitUniversityRequest();
+            });
+        }
+    </script>
+</body>
+</html>

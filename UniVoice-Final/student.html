@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة الطالب - أطلس</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Supabase and runtime config -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+
+    <style>
+        :root {
+            --bg-master: #f8fafc;
+            --glass: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(226, 232, 240, 0.8);
+            --neon-blue: #3b82f6;
+            --neon-purple: #8b5cf6;
+            --neon-green: #10b981;
+            --text-main: #1e293b;
+            --text-mud: #64748b;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--bg-master);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body[lang="en"],
+        body[lang="fr"] {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* الخلفية المتحركة */
+        .bg-fixed-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: #ffffff;
+            background-image: radial-gradient(circle at 10% 10%, #f1f5f9, #ffffff);
+            overflow: hidden;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: var(--neon-purple);
+            top: -100px;
+            left: -100px;
+        }
+
+        .orb-2 {
+            width: 300px;
+            height: 300px;
+            background: var(--neon-blue);
+            bottom: -50px;
+            right: -50px;
+            animation-delay: -5s;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translate(0, 0);
+            }
+
+            50% {
+                transform: translate(30px, -30px);
+            }
+        }
+
+        /* Glassmorphism Classes */
+        .glass-panel {
+            background: var(--glass);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        .hover-scale {
+            transition: transform 0.2s;
+        }
+
+        .hover-scale:hover {
+            transform: scale(1.02);
+        }
+
+        .like-anim {
+            animation: like-bounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes like-bounce {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.3);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* Input Styling */
+        .input-box {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            color: var(--text-main);
+            transition: all 0.3s;
+        }
+
+        .input-box:focus-within {
+            border-color: var(--neon-blue);
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Skeleton Loading Animation */
+        .skeleton {
+            background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* XP Bar */
+        .xp-container {
+            background: rgba(0, 0, 0, 0.3);
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .xp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
+            width: 65%;
+            transition: width 1s ease-out;
+        }
+
+        /* Scroll Reveal Animation */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease-out;
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Voice Wave Animation */
+        .voice-wave {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            height: 20px;
+        }
+
+        .voice-bar {
+            width: 3px;
+            background: #ef4444;
+            animation: wave 0.5s ease-in-out infinite;
+            border-radius: 2px;
+        }
+
+        .voice-bar:nth-child(1) {
+            height: 10px;
+            animation-delay: 0.1s;
+        }
+
+        .voice-bar:nth-child(2) {
+            height: 15px;
+            animation-delay: 0.2s;
+        }
+
+        .voice-bar:nth-child(3) {
+            height: 20px;
+            animation-delay: 0.3s;
+        }
+
+        .voice-bar:nth-child(4) {
+            height: 15px;
+            animation-delay: 0.2s;
+        }
+
+        .voice-bar:nth-child(5) {
+            height: 10px;
+            animation-delay: 0.1s;
+        }
+
+        @keyframes wave {
+
+            0%,
+            100% {
+                height: 5px;
+            }
+
+            50% {
+                height: 20px;
+            }
+        }
+
+        .cursor-blink {
+            display: inline-block;
+            width: 2px;
+            height: 1em;
+            background-color: var(--neon-green);
+            animation: blink 1s infinite;
+            vertical-align: sub;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+        }
+
+        /* Language Switcher Styles */
+        .lang-btn {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 6px;
+            color: #94a3b8;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .lang-btn.active {
+            background: rgba(59, 130, 246, 0.2);
+            color: white;
+            font-weight: bold;
+            border: 1px solid rgba(59, 130, 246, 0.4);
+        }
+
+        .lang-btn:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+
+        /* Dropdown Animation */
+        .dropdown-enter {
+            animation: slideDown 0.2s ease-out forwards;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .univ-subtitle {
+            color: #64748b;
+        }
+    </style>
+</head>
+
+<body class="text-slate-800">
+
+    <div class="bg-fixed-layer">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div id="particles" class="absolute inset-0 opacity-20"></div>
+    </div>
+
+
+    <!-- Navbar -->
+    <nav class="sticky top-0 z-50 glass-panel border-b border-slate-200 px-4 md:px-6 py-3 mb-8">
+        <div class="max-w-7xl mx-auto flex justify-between items-center gap-2">
+
+            <!-- Logo & Title & University Logo Placeholder -->
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shadow-sm p-1">
+                    <div class="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow">NUIF</div>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base md:text-lg tracking-wide text-slate-800"><span id="txt-nav-title">منصة الطالب</span> <span class="text-blue-500 text-xs font-mono">v2.2</span></h1>
+                </div>
+                
+                <!-- University Logo and Name Placeholder (New) -->
+                <div class="hidden md:flex items-center gap-2 rtl:mr-4 ltr:ml-4 border-r rtl:border-r-slate-200 ltr:border-l ltr:border-l-slate-200 rtl:pr-4 ltr:pl-4">
+                    <div id="univ-logo-placeholder" class="w-8 h-8 rounded bg-transparent flex items-center justify-center overflow-hidden">
+                        <!-- مساحة فارغة لشعار الجامعة مستقبلاً -->
+                    </div>
+                    <span id="nav-display-university" class="text-xs font-bold text-slate-600">...</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 md:gap-6">
+
+                <!-- Language Switcher -->
+                <div class="flex bg-slate-100 rounded-lg p-1 border border-slate-200">
+                    <button onclick="changeLang('ar')" id="btn-lang-ar" class="lang-btn active">AR</button>
+                    <button onclick="changeLang('en')" id="btn-lang-en" class="lang-btn">EN</button>
+                    <button onclick="changeLang('fr')" id="btn-lang-fr" class="lang-btn">FR</button>
+                </div>
+
+                <!-- Notifications Bell -->
+                <div class="relative">
+                    <button onclick="toggleNotifications()" class="relative p-2 rounded-full hover:bg-slate-100 text-slate-600 transition" title="الإشعارات">
+                        <i class="far fa-bell text-lg"></i>
+                        <span id="notif-badge" class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse hidden"></span>
+                    </button>
+                    <!-- Dropdown -->
+                    <div id="notif-dropdown" class="hidden absolute top-12 left-0 rtl:left-0 ltr:right-0 w-80 bg-white shadow-2xl rounded-2xl border border-slate-200 z-50 overflow-hidden">
+                        <div class="p-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                            <h4 class="text-sm font-bold" id="txt-notif-title">الإشعارات</h4>
+                            <button onclick="markAllNotificationsRead()" class="text-[10px] text-blue-500 hover:text-blue-700 font-bold">قراءة الكل</button>
+                        </div>
+                        <div id="notif-list" class="max-h-64 overflow-y-auto">
+                            <div class="p-4 text-center text-slate-400 text-xs">لا توجد إشعارات</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Specialty & Year -->
+                <div class="hidden md:flex flex-col items-end mr-4 text-right">
+                    <div class="text-xs font-bold text-slate-700" id="display-nav-specialty">...</div>
+                    <div class="text-[10px] text-slate-500 font-mono" id="display-nav-year">...</div>
+                    <span class="text-sm font-bold hidden md:inline" id="display-name-small">زائر</span>
+                </div>
+
+                <!-- Logout -->
+                <button onclick="logout()" class="w-8 h-8 md:w-9 md:h-9 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition border border-red-500/20" title="تسجيل الخروج">
+                    <i class="fas fa-sign-out-alt text-xs md:text-sm"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Welcome Section -->
+    <div class="welcome-section px-4 mb-8">
+        <h1 class="text-3xl font-bold text-slate-800"><span id="txt-welcome-prefix">مرحباً،</span> <span id="display-name">جاري التحميل...</span> 👋</h1>
+        <h3 class="univ-subtitle"><span id="txt-univ-prefix">جامعة:</span> <span id="display-university">...</span></h3>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-4 gap-8">
+
+        <!-- Left Sidebar -->
+        <aside class="hidden lg:block lg:col-span-1 space-y-6">
+
+            <!-- Time Widget (New) -->
+            <div class="glass-panel rounded-2xl p-4 flex items-center justify-between reveal active">
+                <div>
+                    <div class="text-xs text-slate-500 mb-1" id="txt-date-label">اليوم</div>
+                    <div class="text-sm font-bold text-slate-800" id="live-date">...</div>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs text-slate-500 mb-1" id="txt-time-label">الساعة</div>
+                    <div class="text-xl font-mono font-bold text-blue-500" id="live-time">...</div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-3xl p-6 text-center relative overflow-hidden group reveal active">
+                <div class="absolute inset-0 bg-gradient-to-b from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition duration-500">
+                </div>
+                <div class="relative">
+                    <div class="w-24 h-24 mx-auto rounded-2xl bg-gradient-to-tr from-slate-100 to-slate-200 p-1 mb-4 shadow-xl relative">
+                        <div id="sidebar-avatar" class="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow mx-auto">NUIF</div>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-800" id="display-name-sidebar">جاري التحميل...</h2>
+                    <p class="text-sm text-slate-500 mb-4" id="display-university-sidebar">جامعتي</p>
+                    <div class="grid grid-cols-2 gap-2 text-center mb-4">
+                        
+                       
+                   
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-3xl p-6">
+                <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4" id="txt-sidebar-trending">
+                    التصنيفات</h3>
+                <div class="flex flex-wrap gap-2">
+                    <button class="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs hover:bg-blue-50 hover:text-blue-600 transition border border-slate-200">#النقل</button>
+                    <button class="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs hover:bg-blue-50 hover:text-blue-600 transition border border-slate-200">#الإطعام</button>
+                    <button class="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs hover:bg-blue-50 hover:text-blue-600 transition border border-slate-200">#البيداغوجيا</button>
+                    <button class="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs hover:bg-blue-50 hover:text-blue-600 transition border border-slate-200">#الإقامة</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Feed -->
+        <main class="lg:col-span-2 space-y-6">
+
+            <!-- Create Request Card -->
+            <div class="glass-panel rounded-3xl p-1 relative overflow-hidden reveal active">
+                <div class="bg-slate-50/50 rounded-[22px] p-5">
+                    <div class="flex gap-4 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-slate-200 flex-shrink-0 overflow-hidden">
+                            <img id="input-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" class="w-full h-full" alt="User avatar">
+                        </div>
+                        <div class="flex-1 space-y-3">
+                            <div class="input-box px-4 py-2">
+                                <label class="text-[10px] text-slate-400 block mb-1 font-bold" id="txt-label-topic">موضوع الانشغال</label>
+                                <input id="post-title" type="text" class="w-full bg-transparent text-base font-bold placeholder-slate-400 border-none focus:ring-0 p-0 text-slate-800" placeholder="مثال: تعطل المكيفات في القاعة 12...">
+                            </div>
+
+                            <div class="input-box px-4 py-2">
+                                <label for="category" class="text-[10px] text-slate-400 block mb-1 font-bold" id="txt-label-category">تصنيف الانشغال</label>
+                                <select id="category" title="تصنيف الانشغال" class="w-full bg-transparent text-sm font-bold border-none focus:ring-0 p-0 text-slate-800 cursor-pointer outline-none">
+                                    <option value="general">عام</option>
+                                    <option value="pedagogical">بيداغوجي</option>
+                                    <option value="infrastructure">مرافق وبنية تحتية</option>
+                                    <option value="security">أمن وسلامة</option>
+                                </select>
+                            </div>
+
+                            <div class="input-box px-4 py-3 relative">
+                                <label class="text-[10px] text-slate-400 block mb-1 font-bold" id="txt-label-details">تفاصيل المشكلة</label>
+                                <textarea id="post-content" rows="3" class="w-full bg-transparent text-sm placeholder-slate-400 border-none focus:ring-0 p-0 resize-none text-slate-600 leading-relaxed" placeholder="اشرح المشكلة بدقة حتى تتمكن الإدارة من معالجتها..."></textarea>
+
+                                <!-- Voice Input Button -->
+                                <button id="voice-btn" onclick="toggleVoiceInput()" class="absolute bottom-2 left-2 rtl:left-2 ltr:right-2 text-slate-400 hover:text-red-500 transition flex items-center justify-center w-8 h-8" title="إملاء صوتي">
+                                    <i class="fas fa-microphone"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Atlas AI Suggestion Area -->
+                    <div id="atlas-suggestion" class="hidden mb-4 bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-700">
+                        <div class="flex items-center gap-2 mb-1 text-blue-600 font-bold">
+                            <i class="fas fa-robot"></i> <span id="txt-atlas-suggest-label">اقتراح أطلس للصياغة الإدارية:</span>
+                        </div>
+                        <p id="atlas-text"></p>
+                    </div>
+
+                    <!-- Image Preview -->
+                    <div id="image-preview-container" class="hidden relative mb-4 rounded-xl overflow-hidden max-h-48 border border-slate-200 group">
+                        <img id="preview-img" class="w-full h-full object-cover" alt="Uploaded image preview">
+                        <button type="button" onclick="removeImage()" class="absolute top-2 left-2 bg-white/80 hover:bg-red-50 text-slate-600 hover:text-red-500 w-8 h-8 rounded-full transition flex items-center justify-center shadow-lg" title="Remove image">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex justify-between items-center pt-3 border-t border-white/5">
+                        <div class="flex gap-2">
+                            <label class="p-2 rounded-full hover:bg-white/5 cursor-pointer text-slate-400 hover:text-green-400 transition" title="إضافة صورة تدعيمية">
+                                <i class="fas fa-camera text-lg"></i>
+                                <input type="file" id="file-upload" class="hidden" accept="image/*" onchange="handleImageUpload(event)" aria-label="Upload image">
+                            </label>
+                            <button onclick="activateAtlas()" class="p-2 rounded-full hover:bg-white/5 cursor-pointer text-slate-400 hover:text-blue-400 transition group relative" title="تحسين النص (AI)">
+                                <i class="fas fa-wand-magic-sparkles text-lg"></i>
+                                <span class="absolute -top-8 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap" id="txt-tooltip-enhance">تحسين الصياغة</span>
+                            </button>
+                        </div>
+                        <button onclick="publishPost()" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-xl font-bold shadow-lg shadow-blue-600/20 transition transform active:scale-95 flex items-center gap-2 text-sm">
+                            <span id="txt-btn-submit">رفع الانشغال للإدارة</span>
+                            <i class="fas fa-paper-plane text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="feed-container" class="space-y-6">
+                <!-- Posts or Skeletons injected here -->
+            </div>
+
+        </main>
+
+        <!-- Right Sidebar -->
+        <aside class="hidden lg:block lg:col-span-1">
+            <div class="sticky top-24 space-y-6">
+                <!-- Announcements handled dynamically here -->
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur border border-green-200 text-slate-800 px-6 py-3 rounded-full shadow-2xl transform translate-y-32 transition-all duration-500 flex items-center gap-3 z-50">
+        <i class="fas fa-check-circle text-green-500"></i>
+        <div class="flex flex-col">
+            <span id="toast-msg" class="text-sm font-bold">تمت العملية بنجاح</span>
+            <span id="toast-sub" class="text-[10px] text-slate-500">سيتم مراجعة الطلب من قبل الإدارة</span>
+        </div>
+    </div>
+
+    <script>
+
+        // --- Core Application Logic with Supabase ---
+        let supabaseClient = null;
+        let currentUser = null;
+        let currentUserProfile = null;
+        let currentFilter = 'newest';
+
+        // Initialize App
+        (async function initApp() {
+            const SUPABASE_URL = (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_URL) || '';
+            const SUPABASE_ANON_KEY = (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_ANON_KEY) || '';
+            
+            try {
+                if (SUPABASE_URL && SUPABASE_ANON_KEY && typeof supabase !== 'undefined') {
+                    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                }
+            } catch (e) { console.warn('Supabase init error', e); }
+
+            if (!supabaseClient) {
+                console.warn('Supabase not configured');
+                return;
+            }
+
+            try {
+                const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+                if (sessionError || !sessionData || !sessionData.session) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                currentUser = sessionData.session.user;
+
+                // Load Enhanced Profile with Joins
+                const { data: profile, error: profileError } = await supabaseClient
+                    .from('profiles')
+                    .select('id, first_name, last_name, specialty, study_year, matricule, avatar_url, preferred_language, university_id, role, universities (name, logo_url)')
+                    .eq('id', currentUser.id)
+                    .single();
+
+                const safeProfile = profile || {};
+
+                if (profileError || safeProfile.role !== 'student') {
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                currentUserProfile = safeProfile;
+                applyProfileData(safeProfile);
+                
+                // Initialize Language
+                const savedSiteLang = localStorage.getItem('site_language');
+                if (savedSiteLang && ['ar','en','fr'].includes(savedSiteLang)) {
+                    changeLang(savedSiteLang);
+                } else if (profile?.preferred_language && ['ar','en','fr'].includes(profile.preferred_language)) {
+                    changeLang(profile.preferred_language);
+                } else {
+                    changeLang('ar');
+                }
+
+                // Initial Data Load
+                loadAnnouncements();
+                loadFeed('newest');
+                loadNotifications();
+
+            } catch (ex) {
+                console.error('Initialization failed', ex);
+            }
+        })();
+
+        // Map Profile Data to UI
+        function applyProfileData(profile) {
+            const safeProfile = profile || {};
+            const fullName = `${safeProfile.first_name || ''} ${safeProfile.last_name || ''}`.trim() || 'طالب';
+            const univName = safeProfile.universities?.name || 'جامعة باتنة 2';
+            const univLogo = safeProfile.universities?.logo_url;
+
+            const setTxt = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
+            setTxt('display-name', fullName);
+            setTxt('display-name-sidebar', fullName);
+            setTxt('display-name-small', safeProfile.first_name || 'طالب');
+            setTxt('display-university', univName);
+            setTxt('display-university-sidebar', univName);
+            setTxt('nav-display-university', univName);
+            setTxt('display-nav-specialty', safeProfile.specialty || '-');
+            setTxt('display-nav-year', safeProfile.study_year || '-');
+            
+            // These IDs might not exist in the HTML yet, but added per requirement #1 for future-proofing
+            setTxt('display-matricule', profile.matricule || '-');
+            setTxt('display-specialty', profile.specialty || '-');
+            setTxt('display-year', profile.study_year || '-');
+
+            if (profile.avatar_url) {
+                const setImg = (id) => { const el = document.getElementById(id); if (el) el.src = profile.avatar_url; }
+                setImg('user-avatar'); setImg('sidebar-avatar'); setImg('input-avatar');
+            }
+
+            if (univLogo) {
+                const logoContainer = document.getElementById('univ-logo-placeholder');
+                if (logoContainer) {
+                    logoContainer.innerHTML = `<img src="${univLogo}" class="w-full h-full object-contain">`;
+                    logoContainer.classList.remove('bg-transparent');
+                }
+                const displayLogo = document.getElementById('display-univ-logo');
+                if (displayLogo) displayLogo.src = univLogo;
+            }
+        }
+
+        // --- Translations Data ---
+        const translations = {
+            ar: {
+                navTitle: "منصة الطالب", navName: "مرحبا",
+                contributions: "مساهمات", trending: "التصنيفات",
+                createTopic: "موضوع الانشغال", createTopicPlaceholder: "مثال: تعطل المكيفات في القاعة 12...",
+                createDetails: "تفاصيل المشكلة", createDetailsPlaceholder: "اشرح المشكلة بدقة حتى تتمكن الإدارة من معالجتها...",
+                atlasSuggestion: "اقتراح أطلس للصياغة الإدارية:", btnEnhance: "تحسين الصياغة", btnSubmit: "رفع الانشغال للإدارة",
+                searchPlaceholder: "بحث في الانشغالات...", filterNewest: "الأحدث",
+                filterSolved: "تم حلها ✅", filterMy: "انشغالاتي",
+                vote: "صوت", comments: "تعليقات", statusPending: "قيد المعالجة ⏳", statusSolved: "تم الحل ✅",
+                toastSuccess: "تمت العملية بنجاح", toastSub: "سوف يُعالج النظام طلبك",
+                notifTitle: "الإشعارات", dateLabel: "اليوم", timeLabel: "الساعة",
+                welcomePrefix: "مرحباً،", univPrefix: "جامعة:", emptyFeed: "لا توجد إعلانات أو منشورات الآن", 
+                viewPdf: "عرض الملف PDF", noAnnouncements: "لا توجد إعلانات إدارية حالياً.", announcementsTitle: "إعلانات الإدارة",
+                sendHint: "اكتب تعليقاً...", sendBtn: "إرسال", hideComments: "إخفاء التعليقات",
+                connectingGemini: 'جاري الاتصال بـ Gemini...', geminiFailed: 'فشل الاتصال بـ Gemini. حاول مجدداً.', acceptSuggestion: 'اعتماد الصياغة',
+                errorEmpty: 'الرجاء ملء جميع الحقول', missingText: 'اكتب نصاً لتحليله',
+                suggestedLevel: 'المستوى المقترح:', levelDepartment: 'قسم', levelInstitute: 'معهد / كلية', levelUniversity: 'جامعة'
+            },
+            en: {
+                navTitle: "Student Platform", navName: "Welcome",
+                contributions: "Contributions", trending: "Categories",
+                createTopic: "Subject", createTopicPlaceholder: "Ex: AC malfunction in Hall 12...",
+                createDetails: "Problem Details", createDetailsPlaceholder: "Explain the issue precisely for administration...",
+                atlasSuggestion: "Atlas AI Suggestion:", btnEnhance: "Enhance Text", btnSubmit: "Submit Request",
+                searchPlaceholder: "Search requests...", filterNewest: "Newest",
+                filterSolved: "Solved ✅", filterMy: "My Complaints",
+                vote: "Vote", comments: "Comments", statusPending: "Pending ⏳", statusSolved: "Solved ✅",
+                toastSuccess: "Operation Successful", toastSub: "Request will be processed",
+                notifTitle: "Notifications", dateLabel: "Today", timeLabel: "Time",
+                welcomePrefix: "Welcome,", univPrefix: "University:", emptyFeed: "No announcements or posts currently available",
+                viewPdf: "View PDF Document", noAnnouncements: "No administrative announcements yet.", announcementsTitle: "Administration",
+                sendHint: "Write a comment...", sendBtn: "Send", hideComments: "Hide Comments",
+                connectingGemini: 'Connecting to Gemini...', geminiFailed: 'Failed to connect to Gemini. Try again.', acceptSuggestion: 'Accept Suggestion',
+                errorEmpty: 'Please fill all fields', missingText: 'Text missing',
+                suggestedLevel: 'Suggested Level:', levelDepartment: 'Department', levelInstitute: 'Institute / Faculty', levelUniversity: 'University'
+            },
+            fr: {
+                navTitle: "Plateforme Étudiant", navName: "Bienvenue",
+                contributions: "Contributions", trending: "Catégories",
+                createTopic: "Sujet", createTopicPlaceholder: "Ex: Panne de climatisation salle 12...",
+                createDetails: "Détails du problème", createDetailsPlaceholder: "Expliquez le problème avec précision...",
+                atlasSuggestion: "Suggestion Atlas IA:", btnEnhance: "Améliorer le texte", btnSubmit: "Soumettre",
+                searchPlaceholder: "Rechercher...", filterNewest: "Récents",
+                filterSolved: "Résolu ✅", filterMy: "Mes Réclamations",
+                vote: "Vote", comments: "Commentaires", statusPending: "En cours ⏳", statusSolved: "Résolu ✅",
+                toastSuccess: "Opération réussie", toastSub: "La demande sera traitée",
+                notifTitle: "Notifications", dateLabel: "Aujourd'hui", timeLabel: "Heure",
+                welcomePrefix: "Bienvenue,", univPrefix: "Université:", emptyFeed: "Aucune publication pour le moment",
+                viewPdf: "Afficher le PDF", noAnnouncements: "Aucune annonce administrative pour le moment.", announcementsTitle: "Administration",
+                sendHint: "Écrire un commentaire...", sendBtn: "Envoyer", hideComments: "Masquer les commentaires",
+                connectingGemini: 'Connexion à Gemini...', geminiFailed: 'Échec de connexion à Gemini. Réessayez.', acceptSuggestion: 'Accepter la suggestion',
+                errorEmpty: 'Veuillez remplir tous les champs', missingText: 'Texte manquant',
+                suggestedLevel: 'Niveau suggéré :', levelDepartment: 'Département', levelInstitute: 'Institut / Faculté', levelUniversity: 'Université'
+            }
+        };
+
+        let currentLang = 'ar';
+        let currentPosts = [];
+        let lastSuggestedLevel = 'department'; // Default level from AI
+
+        function changeLang(lang) {
+            currentLang = lang;
+            const t = translations[lang];
+
+            document.documentElement.lang = lang;
+            document.documentElement.dir = (lang === 'ar') ? 'rtl' : 'ltr';
+
+            document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById(`btn-lang-${lang}`);
+            if(activeBtn) activeBtn.classList.add('active');
+
+            const setTxt = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+            const setPlaceholder = (id, text) => { const el = document.getElementById(id); if (el) el.placeholder = text; };
+
+            setTxt('txt-nav-title', t.navTitle);
+            setTxt('txt-sidebar-contrib', t.contributions);
+            setTxt('txt-sidebar-trending', t.trending); setTxt('txt-label-topic', t.createTopic);
+            setTxt('txt-label-details', t.createDetails); setTxt('txt-atlas-suggest-label', t.atlasSuggestion);
+            setTxt('txt-tooltip-enhance', t.btnEnhance); setTxt('txt-btn-submit', t.btnSubmit);
+            setTxt('txt-filter-newest', t.filterNewest);
+            setTxt('txt-filter-solved', t.filterSolved);
+            setTxt('txt-filter-my', t.filterMy);
+            setTxt('txt-notif-title', t.notifTitle);
+            setTxt('txt-date-label', t.dateLabel); setTxt('txt-time-label', t.timeLabel);
+            setTxt('txt-welcome-prefix', t.welcomePrefix); setTxt('txt-univ-prefix', t.univPrefix);
+
+            setPlaceholder('post-title', t.createTopicPlaceholder);
+            setPlaceholder('post-content', t.createDetailsPlaceholder);
+            setPlaceholder('search-box', t.searchPlaceholder);
+
+            renderPosts(currentPosts); // Re-render feed strings
+            loadAnnouncements(); // Re-render announcements text
+            updateClock(); 
+        }
+
+        // --- Fetch & Render Feeds (Complaints) ---
+        async function loadFeed(filterType = 'newest') {
+            currentFilter = filterType;
+            if(!supabaseClient || !currentUserProfile) return;
+            renderSkeletons();
+
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('text-white', 'font-bold', 'border-blue-500');
+                btn.classList.add('hover:text-white', 'border-transparent', 'hover:border-slate-600');
+            });
+            const activeBtn = document.getElementById(`filter-${filterType}`);
+            if(activeBtn){
+                activeBtn.classList.add('text-white', 'font-bold', 'border-blue-500');
+                activeBtn.classList.remove('border-transparent', 'hover:border-slate-600');
+            }
+
+            try {
+                let query = supabaseClient.from('complaints')
+                    .select(`
+                        id, title, content, media_url, status, created_at, votes_count, category, author_role, author_id, admin_reply,
+                        profiles (id, first_name, last_name, avatar_url)
+                    `)
+                    .order('created_at', { ascending: false });
+
+                if (currentUserProfile?.university_id) {
+                    query = query.eq('university_id', currentUserProfile.university_id);
+                }
+
+                if (filterType === 'solved') {
+                    query = query.eq('status', 'resolved');
+                } else if (filterType === 'my_complaints') {
+                    if(currentUser?.id) query = query.eq('author_id', currentUser.id);
+                } else {
+                    query = query.eq('status', 'approved'); // Only show approved posts to students
+                }
+
+                const { data: complaints, error } = await query;
+                if (error) throw error;
+
+                let finalData = complaints;
+
+                const complaintIds = finalData.map(c => c.id);
+                let userVotes = [];
+                if (complaintIds.length > 0) {
+                    const { data: votesData } = await supabaseClient
+                        .from('complaint_votes')
+                        .select('complaint_id')
+                        .eq('user_id', currentUser.id)
+                        .in('complaint_id', complaintIds);
+                    if (votesData) userVotes = votesData.map(v => v.complaint_id);
+                }
+
+                currentPosts = finalData.map(c => ({
+                    id: c.id,
+                    author: c.profiles ? `${c.profiles.first_name || ''} ${c.profiles.last_name || ''}` : (c.author_role === 'admin' ? 'الإدارة (Admin)' : 'مستخدم'),
+                    authorRole: c.author_role,
+                    avatarUrl: c.profiles?.avatar_url,
+                    time: new Date(c.created_at).toLocaleString((currentLang === 'ar' ? 'ar-SA' : 'en-US')),
+                    status: c.status,
+                    title: c.title,
+                    content: c.content,
+                    mediaUrl: c.media_url,
+                    votes: c.votes_count || 0,
+                    hasVoted: userVotes.includes(c.id),
+                    adminReply: c.admin_reply || null
+                }));
+
+                renderPosts(currentPosts);
+
+            } catch (err) {
+                console.error("Error loading feeds", err);
+            }
+        }
+
+        function searchPosts() {
+            const query = document.getElementById('search-box').value.toLowerCase();
+            const filtered = currentPosts.filter(p =>
+                p.title.toLowerCase().includes(query) ||
+                p.content.toLowerCase().includes(query)
+            );
+            renderPosts(filtered);
+        }
+
+        // --- Notifications System ---
+        function toggleNotifications() {
+            const dd = document.getElementById('notif-dropdown');
+            dd.classList.toggle('hidden');
+            if (!dd.classList.contains('hidden')) loadNotifications();
+        }
+
+        async function loadNotifications() {
+            if (!supabaseClient || !currentUser) return;
+            const list = document.getElementById('notif-list');
+            const badge = document.getElementById('notif-badge');
+            const t = translations[currentLang];
+
+            try {
+                const { data: notifs, error } = await supabaseClient
+                    .from('notifications')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('created_at', { ascending: false })
+                    .limit(20);
+
+                if (error) throw error;
+
+                const unread = (notifs || []).filter(n => !n.is_read);
+                if (unread.length > 0) {
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+
+                if (!notifs || notifs.length === 0) {
+                    list.innerHTML = `<div class="p-4 text-center text-slate-400 text-xs">${t.emptyFeed || 'لا توجد إشعارات'}</div>`;
+                    return;
+                }
+
+                const iconMap = {
+                    approved: { icon: 'fa-check', bg: 'bg-green-100', color: 'text-green-600' },
+                    resolved: { icon: 'fa-check-double', bg: 'bg-blue-100', color: 'text-blue-600' },
+                    rejected: { icon: 'fa-times', bg: 'bg-red-100', color: 'text-red-600' },
+                    temp_solution: { icon: 'fa-wrench', bg: 'bg-orange-100', color: 'text-orange-600' },
+                    needs_info: { icon: 'fa-question-circle', bg: 'bg-yellow-100', color: 'text-yellow-600' }
+                };
+
+                list.innerHTML = notifs.map(n => {
+                    const ic = iconMap[n.type] || iconMap.approved;
+                    let msg = n.message;
+                    try { const parsed = JSON.parse(n.message); msg = parsed[currentLang] || parsed.ar || n.message; } catch(e) { /* plain text */ }
+                    const timeAgo = getTimeAgo(new Date(n.created_at));
+                    return `
+                    <div class="p-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition flex gap-3 ${n.is_read ? 'opacity-60' : ''}" onclick="markNotificationRead('${n.id}')">
+                        <div class="w-8 h-8 rounded-full ${ic.bg} ${ic.color} flex items-center justify-center text-xs shrink-0">
+                            <i class="fas ${ic.icon}"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs text-slate-800 leading-relaxed">${msg}</p>
+                            <span class="text-[10px] text-slate-400">${timeAgo}</span>
+                        </div>
+                        ${!n.is_read ? '<div class="w-2 h-2 bg-blue-500 rounded-full self-center shrink-0 ml-auto"></div>' : ''}
+                    </div>`;
+                }).join('');
+            } catch(err) {
+                console.error('Notifications error:', err);
+                list.innerHTML = '<div class="p-4 text-center text-red-400 text-xs">خطأ في تحميل الإشعارات</div>';
+            }
+        }
+
+        function getTimeAgo(date) {
+            const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+            if (diff < 60) return currentLang === 'ar' ? 'الآن' : 'Just now';
+            if (diff < 3600) return currentLang === 'ar' ? `منذ ${Math.floor(diff/60)} دقيقة` : `${Math.floor(diff/60)}m ago`;
+            if (diff < 86400) return currentLang === 'ar' ? `منذ ${Math.floor(diff/3600)} ساعة` : `${Math.floor(diff/3600)}h ago`;
+            return currentLang === 'ar' ? `منذ ${Math.floor(diff/86400)} يوم` : `${Math.floor(diff/86400)}d ago`;
+        }
+
+        async function markNotificationRead(notifId) {
+            if (!supabaseClient) return;
+            await supabaseClient.from('notifications').update({ is_read: true }).eq('id', notifId);
+            loadNotifications();
+        }
+
+        async function markAllNotificationsRead() {
+            if (!supabaseClient || !currentUser) return;
+            await supabaseClient.from('notifications').update({ is_read: true }).eq('user_id', currentUser.id).eq('is_read', false);
+            loadNotifications();
+        }
+
+        // --- Render Feeds ---
+        function renderSkeletons() {
+            const container = document.getElementById('feed-container');
+            let skeletonsHtml = '';
+            for (let i = 0; i < 3; i++) {
+                skeletonsHtml += `
+                    <div class="glass-panel rounded-3xl p-6 reveal">
+                        <div class="flex gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-xl skeleton"></div>
+                            <div class="flex-1 space-y-2">
+                                <div class="h-3 w-32 skeleton"></div>
+                                <div class="h-2 w-20 skeleton"></div>
+                            </div>
+                        </div>
+                        <div class="h-6 w-3/4 skeleton mb-3"></div>
+                        <div class="h-4 w-full skeleton mb-2"></div>
+                        <div class="h-4 w-2/3 skeleton mb-4"></div>
+                        <div class="h-40 w-full skeleton rounded-xl"></div>
+                    </div>`;
+            }
+            container.innerHTML = skeletonsHtml;
+        }
+
+        function renderPosts(postsToRender) {
+            const container = document.getElementById('feed-container');
+            container.innerHTML = '';
+            const t = translations[currentLang];
+
+            if (postsToRender.length === 0) {
+                container.innerHTML = `<div class="text-center py-10 text-slate-400 text-sm font-bold bg-white/50 rounded-2xl border border-slate-200">${t.emptyFeed}</div>`;
+                return;
+            }
+
+            postsToRender.forEach(post => {
+                const isAdmin = post.authorRole === 'admin';
+                const adminClass = isAdmin ? 'border-2 border-amber-400 bg-amber-50/10' : 'border border-transparent';
+                const adminBadge = isAdmin ? `<div class="absolute top-0 right-0 rtl:right-auto rtl:left-0 bg-amber-400 text-amber-900 text-[10px] font-bold px-3 py-1 rounded-bl-xl rounded-tr-3xl rtl:rounded-tr-none rtl:rounded-tl-3xl rtl:rounded-br-xl shadow-sm z-10"><i class="fas fa-bullhorn"></i> إعلان إداري</div>` : '';
+
+                const statusBadge = post.status === 'resolved'
+                    ? `<span class="px-2 py-1 rounded-md bg-green-100 text-green-600 text-[10px] border border-green-200 font-bold">${t.statusSolved}</span>`
+                    : (post.status === 'approved' 
+                        ? `<span class="px-2 py-1 rounded-md bg-blue-50 text-blue-600 text-[10px] border border-blue-200 font-bold">موافق عليه</span>`
+                        : (post.status === 'rejected'
+                            ? `<span class="px-2 py-1 rounded-md bg-red-50 text-red-600 text-[10px] border border-red-200 font-bold">مرفوض</span>`
+                            : (post.status === 'temp_solution'
+                                ? `<span class="px-2 py-1 rounded-md bg-orange-50 text-orange-600 text-[10px] border border-orange-200 font-bold"><i class="fas fa-wrench mr-1"></i> حل مؤقت</span>`
+                                : (post.status === 'needs_info'
+                                    ? `<span class="px-2 py-1 rounded-md bg-yellow-50 text-yellow-700 text-[10px] border border-yellow-200 font-bold"><i class="fas fa-question-circle mr-1"></i> يحتاج تفاصيل</span>`
+                                    : `<span class="px-2 py-1 rounded-md bg-amber-50 text-amber-600 text-[10px] border border-amber-200 font-bold">${t.statusPending}</span>`))));
+
+                // عرض رد الإدارة في قسم انشغالاتي فقط
+                let adminReplyHtml = '';
+                if (post.adminReply && currentFilter === 'my_complaints') {
+                    adminReplyHtml = `
+                    <div class="bg-indigo-50 border-r-4 border-indigo-500 p-3 mt-4 text-indigo-900 text-sm font-bold whitespace-pre-wrap rounded-l-lg shadow-sm">
+                        رد الإدارة: ${post.adminReply}
+                    </div>`;
+                }
+
+                let mediaHtml = '';
+                if (post.mediaUrl) {
+                    if (post.mediaUrl.toLowerCase().endsWith('.pdf')) {
+                        mediaHtml = `<a href="${post.mediaUrl}" target="_blank" class="block w-fit px-4 py-2 mt-4 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm hover:bg-red-100 transition"><i class="fas fa-file-pdf mr-2 rtl:ml-2"></i> ${t.viewPdf}</a>`;
+                    } else {
+                        mediaHtml = `
+                        <div class="rounded-xl overflow-hidden mt-4 border border-slate-100 h-48 relative group cursor-pointer" onclick="window.open('${post.mediaUrl}', '_blank')">
+                            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition"></div>
+                            <img src="${post.mediaUrl}" class="w-full h-full object-cover">
+                        </div>`;
+                    }
+                }
+
+                const html = `
+                <div class="glass-panel rounded-3xl p-6 hover-scale relative group reveal mb-6 ${adminClass}" id="post-rect-${post.id}">
+                    ${adminBadge}
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex gap-3">
+                            <img src="${post.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + post.author}" class="w-10 h-10 rounded-xl bg-slate-100 object-cover">
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-sm">${post.author}</h4>
+                                <div class="text-[10px] text-slate-500">${post.time}</div>
+                            </div>
+                        </div>
+                        ${statusBadge}
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-slate-800 mb-2">${post.title}</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed mb-4">${post.content}</p>
+                    ${mediaHtml}
+                    ${adminReplyHtml}
+
+                    <div class="flex items-center justify-between pt-4 border-t border-slate-200/50 mt-4">
+                        <div class="flex items-center gap-1">
+                            ${post.status === 'approved' ? `
+                            <button onclick="toggleVote(this, '${post.id}')" class="group flex items-center gap-2 px-3 py-1.5 rounded-xl transition ${post.hasVoted ? 'voted bg-blue-500/20 border border-blue-500/50' : 'bg-slate-100/50 border border-transparent'}">
+                                <i class="fas fa-arrow-up ${post.hasVoted ? 'text-blue-500' : 'text-slate-400 group-hover:text-blue-500'} transition transform group-active:-translate-y-1"></i>
+                                <span class="text-sm font-bold ${post.hasVoted ? 'text-blue-700' : 'text-slate-500 group-hover:text-slate-700'} count">${post.votes}</span>
+                            </button>
+                            <span class="text-[10px] text-slate-500 mr-2 rtl:mr-2 ltr:ml-2">${t.vote}</span>
+                            ` : `
+                            <span class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-green-50 border border-green-200 text-green-600 text-xs font-bold">
+                                <i class="fas fa-check-circle"></i> ${t.statusSolved || 'تم الحل'}
+                            </span>
+                            <span class="text-sm font-bold text-slate-400 ml-2">${post.votes} <i class="fas fa-arrow-up text-xs"></i></span>
+                            `}
+                        </div>
+                        <div class="flex gap-3 text-slate-400">
+                            <button onclick="toggleComments('${post.id}')" class="hover:text-blue-600 transition text-xs"><i class="far fa-comment-alt"></i> ${t.comments}</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Comments Container (Hidden initially) -->
+                    <div id="comments-${post.id}" class="hidden mt-4 pt-4 border-t border-slate-100">
+                        <div class="flex gap-2 mb-4">
+                            <input type="text" id="comment-input-${post.id}" class="flex-1 input-box text-xs px-3 py-2" placeholder="${t.sendHint}">
+                            <button onclick="sendComment('${post.id}')" class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-slate-700 transition"><i class="fas fa-paper-plane mr-1 rtl:ml-1"></i> ${t.sendBtn}</button>
+                        </div>
+                        <div id="comments-list-${post.id}" class="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scroll">
+                            <div class="text-center text-[10px] text-slate-400 animate-pulse"><i class="fas fa-circle-notch fa-spin"></i></div>
+                        </div>
+                    </div>
+                </div>`;
+                container.innerHTML += html;
+            });
+
+            setupScrollReveal(); 
+        }
+
+        // --- Interactivity: Voting & Comments ---
+        async function toggleVote(btn, complaintId) {
+            const isVoted = btn.classList.contains('voted');
+            const countSpan = btn.querySelector('.count');
+            const icon = btn.querySelector('i');
+            let count = parseInt(countSpan.innerText) || 0;
+
+            if (isVoted) {
+                // Optimistic UI - Decrease
+                count--;
+                btn.classList.remove('voted', 'bg-blue-500/20', 'border-blue-500/50');
+                btn.classList.add('bg-slate-100/50', 'border-transparent');
+                icon.classList.remove('text-blue-500');
+                icon.classList.add('text-slate-400');
+                countSpan.classList.remove('text-blue-700');
+                countSpan.classList.add('text-slate-500');
+                countSpan.innerText = count;
+                const pIndex = currentPosts.findIndex(p => p.id === complaintId); if(pIndex !== -1) { currentPosts[pIndex].hasVoted = false; currentPosts[pIndex].votes = count; }
+
+                await supabaseClient.from('complaint_votes').delete().eq('complaint_id', complaintId).eq('user_id', currentUser.id);
+                await supabaseClient.from('complaints').update({ votes_count: count }).eq('id', complaintId);
+
+            } else {
+                // Optimistic UI - Increase
+                count++;
+                btn.classList.add('voted', 'bg-blue-500/20', 'border-blue-500/50', 'like-anim');
+                btn.classList.remove('bg-slate-100/50', 'border-transparent');
+                icon.classList.remove('text-slate-400');
+                icon.classList.add('text-blue-500');
+                countSpan.classList.remove('text-slate-500');
+                countSpan.classList.add('text-blue-700');
+                countSpan.innerText = count;
+                const pIndex = currentPosts.findIndex(p => p.id === complaintId); if(pIndex !== -1) { currentPosts[pIndex].hasVoted = true; currentPosts[pIndex].votes = count; }
+
+                await supabaseClient.from('complaint_votes').insert([{ complaint_id: complaintId, user_id: currentUser.id }]);
+                await supabaseClient.from('complaints').update({ votes_count: count }).eq('id', complaintId);
+            }
+        }
+
+        async function toggleComments(complaintId) {
+            const container = document.getElementById(`comments-${complaintId}`);
+            const isHidden = container.classList.contains('hidden');
+            if (isHidden) {
+                container.classList.remove('hidden');
+                loadComments(complaintId);
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        async function loadComments(complaintId) {
+            const listDiv = document.getElementById(`comments-list-${complaintId}`);
+            try {
+                const { data: comments, error } = await supabaseClient
+                    .from('comments')
+                    .select('id, content, created_at, profiles (first_name, last_name, avatar_url)')
+                    .eq('complaint_id', complaintId)
+                    .order('created_at', { ascending: true });
+                
+                if (error) throw error;
+
+                if (comments.length === 0) {
+                    listDiv.innerHTML = `<div class="text-center text-[10px] text-slate-400">${currentLang === 'ar' ? 'لا توجد تعليقات بعد' : 'No comments yet'}</div>`;
+                    return;
+                }
+
+                listDiv.innerHTML = comments.map(c => `
+                    <div class="flex gap-2">
+                        <img src="${c.profiles?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=user'}" class="w-6 h-6 rounded-full object-cover">
+                        <div class="bg-slate-50 border border-slate-100 rounded-lg p-2 flex-1">
+                            <div class="text-[10px] font-bold text-slate-700 mb-0.5">${c.profiles?.first_name || ''} ${c.profiles?.last_name || ''}</div>
+                            <div class="text-xs text-slate-600">${c.content}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (err) {
+                console.error(err);
+                listDiv.innerHTML = '<div class="text-[10px] text-red-500">Error loading comments</div>';
+            }
+        }
+
+        async function sendComment(complaintId) {
+            const input = document.getElementById(`comment-input-${complaintId}`);
+            const content = input.value.trim();
+            if (!content) return;
+            
+            input.disabled = true;
+            try {
+                const { error } = await supabaseClient.from('comments').insert([{
+                    complaint_id: complaintId,
+                    user_id: currentUser.id,
+                    content: content
+                }]);
+                if (error) throw error;
+                input.value = '';
+                await loadComments(complaintId);
+            } catch (err) {
+                console.error(err);
+                showToast("Error sending comment", "error");
+            } finally {
+                input.disabled = false;
+            }
+        }
+
+        // --- Real Announcements Sidebar (Requirement 4) ---
+        async function loadAnnouncements() {
+            if(!supabaseClient || !currentUserProfile) return;
+            const container = document.querySelector('aside.lg\\:block.lg\\:col-span-1 > div');
+            if(!container) return; // Right sidebar wrapper
+            
+            try {
+                const { data: announcements, error } = await supabaseClient
+                    .from('announcements')
+                    .select('*')
+                    .eq('university_id', currentUserProfile.university_id)
+                    .order('created_at', { ascending: false })
+                    .limit(5);
+
+                if (error) throw error;
+
+                // Create announcements HTML block
+                const t = translations[currentLang];
+                let html = `<div class="glass-panel rounded-3xl p-6 border-t-2 border-t-purple-500 reveal active mt-6">
+                    <h3 class="font-bold text-sm text-slate-700 mb-4 flex items-center gap-2"><i class="fas fa-bullhorn text-purple-500"></i> ${t.announcementsTitle}</h3>
+                    <div class="space-y-4">`;
+
+                if (!announcements || announcements.length === 0) {
+                    html += `<p class="text-xs text-slate-500">${t.noAnnouncements}</p>`;
+                } else {
+                    announcements.forEach(a => {
+                        let aMediaHtml = '';
+                        if (a.media_url) {
+                            if (a.media_url.endsWith('.pdf')){
+                                aMediaHtml = `<a href="${a.media_url}" target="_blank" class="text-[10px] text-red-500 hover:text-red-600 block mt-1"><i class="fas fa-file-pdf"></i> ${t.viewPdf}</a>`;
+                            } else {
+                                aMediaHtml = `<img src="${a.media_url}" class="w-full h-20 object-cover mt-2 rounded-lg cursor-pointer" onclick="window.open('${a.media_url}')">`;
+                            }
+                        }
+                        html += `
+                            <div class="border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+                                <h4 class="text-xs font-bold text-slate-800 mb-1">${a.title}</h4>
+                                ${a.content ? `<p class="text-[10px] text-slate-500 line-clamp-2">${a.content}</p>` : ''}
+                                ${aMediaHtml}
+                            </div>
+                        `;
+                    });
+                }
+                
+                html += `</div></div>`;
+                
+                // Add to sidebar under Atlas
+                const existing = document.getElementById('dynamic-announcements');
+                if(existing) existing.remove();
+                
+                const wrapper = document.createElement('div');
+                wrapper.id = 'dynamic-announcements';
+                wrapper.innerHTML = html;
+                container.appendChild(wrapper);
+
+            } catch (err) {
+                console.error("Announcements failed", err);
+            }
+        }
+
+        // --- Publish & AI Logic ---
+        async function publishPost() {
+            const title = document.getElementById('post-title').value;
+            const content = document.getElementById('post-content').value;
+            const fileInput = document.getElementById('file-upload');
+            const file = fileInput.files[0];
+            const t = translations[currentLang];
+
+            if (!title || !content) { showToast(t.errorEmpty || "Error: Empty Fields", "error"); return; }
+            
+            const submitBtn = document.querySelector('button[onclick="publishPost()"]');
+            const originalBtnHtml = submitBtn.innerHTML;
+            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+            submitBtn.disabled = true;
+
+            try {
+                let media_url = null;
+                if (file) {
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `${currentUser.id}_${Date.now()}.${fileExt}`;
+                    const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                        .from('atlas_media')
+                        .upload(fileName, file);
+                    
+                    if (uploadError) throw uploadError;
+                    
+                    const { data: { publicUrl } } = supabaseClient.storage.from('atlas_media').getPublicUrl(fileName);
+                    media_url = publicUrl;
+                }
+
+                const { error: insertErr } = await supabaseClient.from('complaints').insert([{
+                    author_id: currentUser.id,
+                    university_id: currentUserProfile.university_id,
+                    title: title,
+                    content: content,
+                    media_url: media_url,
+                    category: document.getElementById('category').value,
+                    status: 'pending',
+                    author_role: 'student',
+                    assigned_level: lastSuggestedLevel || 'department'
+                }]);
+
+                if (insertErr) throw insertErr;
+
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#3b82f6', '#10b981', '#f472b6'] });
+                document.getElementById('post-title').value = '';
+                document.getElementById('post-content').value = '';
+                document.getElementById('atlas-suggestion').classList.add('hidden');
+                removeImage();
+                showToast(t.toastSuccess, "success");
+                
+                loadFeed('newest'); 
+
+            } catch (err) {
+                console.error(err);
+                showToast(err.message, "error");
+            } finally {
+                submitBtn.innerHTML = originalBtnHtml;
+                submitBtn.disabled = false;
+            }
+        }
+
+        async function activateAtlas() {
+            const content = document.getElementById('post-content').value;
+            const category = document.getElementById('category').value;
+            const title = document.getElementById('post-title').value;
+            const suggestionBox = document.getElementById('atlas-suggestion');
+            const suggestionText = document.getElementById('atlas-text');
+            const t = translations[currentLang];
+            if (!content) { showToast(t.missingText || "Text missing", "error"); return; }
+
+            suggestionBox.classList.remove('hidden');
+            suggestionText.innerHTML = '<span class="cursor-blink"></span> ' + (t.connectingGemini || 'Connecting to Gemini...');
+
+            try {
+                const langMap = { ar: 'Arabic', en: 'English', fr: 'French' };
+                const promptText = `You are Atlas, a smart university administration assistant.
+Analyze this student concern and do two things:
+1. Rewrite it in a professional, polite, and well-structured administrative tone.
+2. Determine which administrative level should handle this concern.
+
+Title: ${title}
+Category: ${category}
+Original Text: ${content}
+
+Return your response as a JSON object with exactly these keys:
+- "refined_text": The enhanced text in ${langMap[currentLang] || 'Arabic'} language.
+- "suggested_level": One of these values ONLY: "department" (for simple pedagogical complaints handled by the department head), "institute" (for problems concerning the institute or faculty), "university" (for major university-wide problems).
+
+IMPORTANT: Return ONLY valid JSON, no extra text.`;
+
+                const { data, error } = await supabaseClient.functions.invoke('gemini-proxy', {
+                    body: { prompt: promptText, isJson: true }
+                });
+                
+                if (error) throw error;
+                
+                let result;
+                try {
+                    result = typeof data.text === 'string' ? JSON.parse(data.text) : data.text;
+                } catch(parseErr) {
+                    // Fallback: treat entire response as refined text
+                    result = { refined_text: data.text || data, suggested_level: 'department' };
+                }
+
+                const refinedText = result.refined_text || data.text || '';
+                const suggestedLevel = ['department','institute','university'].includes(result.suggested_level) ? result.suggested_level : 'department';
+                lastSuggestedLevel = suggestedLevel;
+
+                const levelLabels = { department: t.levelDepartment || 'قسم', institute: t.levelInstitute || 'معهد / كلية', university: t.levelUniversity || 'جامعة' };
+                const levelColors = { department: 'bg-emerald-100 text-emerald-700 border-emerald-200', institute: 'bg-amber-100 text-amber-700 border-amber-200', university: 'bg-red-100 text-red-700 border-red-200' };
+                const safeText = refinedText.replace(/`/g, '\\`');
+                
+                suggestionText.innerHTML = `
+                    <div class="mb-3 text-slate-700 leading-relaxed font-medium whitespace-pre-wrap">${refinedText}</div>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <span class="px-3 py-1.5 rounded-lg text-xs font-bold border ${levelColors[suggestedLevel]}">
+                            <i class="fas fa-layer-group mr-1"></i> ${t.suggestedLevel || 'المستوى المقترح:'} ${levelLabels[suggestedLevel]}
+                        </span>
+                        <button type="button" onclick="acceptAtlasSuggestion(\`${safeText}\`)" class="bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-2 px-4 rounded-xl text-xs flex items-center gap-2 transition shadow-sm border border-blue-200">
+                            <i class="fas fa-check"></i> ${t.acceptSuggestion || 'Accept Suggestion'}
+                        </button>
+                    </div>
+                `;
+            } catch (err) {
+                console.error(err);
+                suggestionText.innerHTML = `<span class="text-red-500">${t.geminiFailed || 'Failed to connect to Gemini'}</span>`;
+            }
+        }
+
+        function acceptAtlasSuggestion(text) {
+            document.getElementById('post-content').value = text;
+            document.getElementById('atlas-suggestion').classList.add('hidden');
+            showToast(translations[currentLang].toastSuccess, "success");
+        }
+
+        // --- Common Helpers ---
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            const msg = document.getElementById('toast-msg');
+            const sub = document.getElementById('toast-sub');
+            const icon = toast.querySelector('i');
+            const t = translations[currentLang];
+            msg.innerText = message; 
+            sub.innerText = t.toastSub || '';
+            if (type === 'error') icon.className = 'fas fa-exclamation-circle text-red-500';
+            else icon.className = 'fas fa-check-circle text-green-500';
+            toast.classList.remove('translate-y-32');
+            setTimeout(() => { toast.classList.add('translate-y-32'); }, 3000);
+        }
+
+        function changeAvatar(event) {
+            const file = event.target.files[0];
+            if (file && supabaseClient && currentUser) {
+                const reader = new FileReader();
+                reader.onload = async function (e) {
+                    const src = e.target.result;
+                    document.getElementById('user-avatar').src = src;
+                    document.getElementById('sidebar-avatar').src = src;
+                    document.getElementById('input-avatar').src = src;
+                    showToast("Avatar Preview", "success");
+                    
+                    // Production: You would upload this to a bucket and mutate profiles.
+                    try {
+                        const fileExt = file.name.split('.').pop();
+                        const fileName = `avatar_${currentUser.id}_${Date.now()}.${fileExt}`;
+                        const { data: uploadData, error: uploadErr } = await supabaseClient.storage.from('atlas_media').upload('avatars/' + fileName, file);
+                        if(uploadData) {
+                            const publicUrl = supabaseClient.storage.from('atlas_media').getPublicUrl('avatars/' + fileName).data.publicUrl;
+                            await supabaseClient.from('profiles').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
+                        }
+                    } catch(ex){}
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        document.querySelector('.group').addEventListener('click', (e) => { if (e.target.tagName !== 'INPUT') document.getElementById('avatar-upload').click(); });
+        function logout() { if (confirm("Logout?")) { document.body.innerHTML = `<div class="flex items-center justify-center h-screen bg-[#0f172a] text-white flex-col gap-4"><i class="fas fa-circle-notch fa-spin text-3xl text-blue-500"></i><div>...</div></div>`; supabaseClient.auth.signOut().then(() => setTimeout(() => { window.location.href = 'index.html'; }, 1000)); } }
+        function handleImageUpload(event) { const file = event.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = function (e) { document.getElementById('preview-img').src = e.target.result; document.getElementById('image-preview-container').classList.remove('hidden'); }; reader.readAsDataURL(file); } }
+        function removeImage() { document.getElementById('file-upload').value = ''; document.getElementById('image-preview-container').classList.add('hidden'); }
+        
+        // --- Visual & Animation ---
+        function toggleNotifications() { document.getElementById('notif-dropdown').classList.toggle('hidden'); }
+        window.onclick = function (event) { if (!event.target.closest('.relative')) { const dropdown = document.getElementById('notif-dropdown'); if (dropdown && !dropdown.classList.contains('hidden')) { dropdown.classList.add('hidden'); } } }
+        
+        function updateClock() {
+            const now = new Date();
+            const timeOptions = { hour: '2-digit', minute: '2-digit' };
+            const dateOptions = { weekday: 'short', month: 'short', day: 'numeric' };
+            const locale = currentLang === 'ar' ? 'ar-SA' : (currentLang === 'fr' ? 'fr-FR' : 'en-US');
+            const liveTime = document.getElementById('live-time');
+            const liveDate = document.getElementById('live-date');
+            if(liveTime) liveTime.innerText = now.toLocaleTimeString(locale, timeOptions);
+            if(liveDate) liveDate.innerText = now.toLocaleDateString(locale, dateOptions);
+        }
+        setInterval(updateClock, 1000); updateClock();
+
+        let isRecording = false;
+        function toggleVoiceInput() {
+            const btn = document.getElementById('voice-btn');
+            const textArea = document.getElementById('post-content');
+            if (!('webkitSpeechRecognition' in window)) { alert("المتصفح لا يدعم الإملاء الصوتي."); return; }
+            if (!isRecording) {
+                isRecording = true; btn.classList.add('text-red-500');
+                btn.innerHTML = `<div class="voice-wave"><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div><div class="voice-bar"></div></div>`;
+                textArea.placeholder = "أطلس يستمع إليك...";
+                const recognition = new webkitSpeechRecognition();
+                recognition.lang = currentLang === 'ar' ? "ar-SA" : (currentLang === 'fr' ? "fr-FR" : "en-US");
+                recognition.onresult = function (event) { textArea.value += event.results[0][0].transcript + " "; };
+                recognition.onend = function () { isRecording = false; btn.classList.remove('text-red-500'); btn.innerHTML = '<i class="fas fa-microphone"></i>'; textArea.placeholder = translations[currentLang].createDetailsPlaceholder; };
+                recognition.start();
+            } else { isRecording = false; }
+        }
+
+        function setupScrollReveal() {
+            const observer = new IntersectionObserver((entries) => { entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('active'); } }); }, { threshold: 0.1 });
+            document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+        }
+
+        const canvasBg = document.createElement('canvas'); canvasBg.style.position = 'fixed'; canvasBg.style.top = '0'; canvasBg.style.left = '0'; canvasBg.style.width = '100%'; canvasBg.style.height = '100%'; canvasBg.style.zIndex = '-2'; canvasBg.style.pointerEvents = 'none'; document.body.appendChild(canvasBg);
+        const ctx = canvasBg.getContext('2d'); function resizeCanvas() { canvasBg.width = window.innerWidth; canvasBg.height = window.innerHeight; } window.addEventListener('resize', resizeCanvas); resizeCanvas();
+        let particles = []; class Particle { constructor() { this.x = Math.random() * canvasBg.width; this.y = Math.random() * canvasBg.height; this.vx = (Math.random() - 0.5) * 0.5; this.vy = (Math.random() - 0.5) * 0.5; this.size = Math.random() * 2; } update() { this.x += this.vx; this.y += this.vy; if (this.x < 0 || this.x > canvasBg.width) this.vx *= -1; if (this.y < 0 || this.y > canvasBg.height) this.vy *= -1; } draw() { ctx.fillStyle = 'rgba(100,116,139,0.2)'; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); } } for (let i = 0; i < 30; i++) particles.push(new Particle()); function animateBg() { ctx.clearRect(0, 0, canvasBg.width, canvasBg.height); particles.forEach(p => { p.update(); p.draw(); }); requestAnimationFrame(animateBg); } animateBg();
+</script>
+</body>
+
+</html>

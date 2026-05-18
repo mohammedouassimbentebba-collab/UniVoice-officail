@@ -763,13 +763,7 @@
                     `)
                     .order('created_at', { ascending: false });
 
-                // if (currentUserProfile?.university_id) {
-                //     query = query.eq('university_id', currentUserProfile.university_id);
-                // }
 
-               // if (currentUser?.id) {
-                //    query = query.eq('author_id', currentUser.id); // User only sees their own posts
-                //}
 
                 if (filterType === 'solved') {
                     query = query.eq('status', 'resolved');
@@ -1184,13 +1178,6 @@
                     .from('complaints')
                     .select('id, title, content, media_url, status, created_at, category, author_role')
                     .eq('status', 'published')
-                    // .eq('university_id', currentUserProfile.university_id)  <--- تم تعطيل هذا السطر
-                    .order('created_at', { ascending: false })
-                    .limit(5);
-
-                if (error) throw error;
-
-                if (error) throw error; .eq('university_id', currentUserProfile.university_id)
                     .order('created_at', { ascending: false })
                     .limit(5);
 

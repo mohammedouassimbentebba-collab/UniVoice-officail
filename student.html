@@ -740,73 +740,44 @@
         }
 
         // --- Fetch & Render Feeds (Complaints) ---
-        async function loadFeed(filterType = 'newest') {
-            currentFilter = filterType;
-            if(!supabaseClient || !currentUserProfile) return;
-            renderSkeletons();
+        async function loadFeed() {
+            const container = document.getElementById('feed-container');
+            if(!container) return;
+            container.innerHTML = `
+                <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-white/5 mb-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <img src="https://ui-avatars.com/api/?name=Wassim&background=6366f1&color=fff&rounded=true" class="w-10 h-10 rounded-full">
+                            <div>
+                                <h4 class="font-bold text-sm text-slate-800 dark:text-white">وسيم بن طبة</h4>
+                                <p class="text-xs text-slate-500">طالب - منذ ساعتين</p>
+                            </div>
+                        </div>
+                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-bold">تمت المعالجة</span>
+                    </div>
+                    <h3 class="font-bold text-slate-800 dark:text-white mb-2">تعطل المكيفات في المدرج 3</h3>
+                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-3">نرجو من الإدارة التدخل لإصلاح المكيفات في المدرج 3 حيث أن الحرارة مرتفعة جداً وتعيق سير المحاضرات.</p>
+                    <div class="mt-3 p-3 bg-indigo-50 border-r-4 border-indigo-500 rounded text-right">
+                        <span class="font-bold text-indigo-700 text-xs">رد الإدارة:</span>
+                        <p class="text-gray-700 text-sm mt-1">تم إرسال فريق الصيانة صباح اليوم، سيتم حل المشكلة قبل موعد المحاضرة القادمة. شكراً لتبليغكم الدقيق.</p>
+                    </div>
+                </div>
 
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('text-white', 'font-bold', 'border-blue-500');
-                btn.classList.add('hover:text-white', 'border-transparent', 'hover:border-slate-600');
-            });
-            const activeBtn = document.getElementById(`filter-${filterType}`);
-            if(activeBtn){
-                activeBtn.classList.add('text-white', 'font-bold', 'border-blue-500');
-                activeBtn.classList.remove('border-transparent', 'hover:border-slate-600');
-            }
-
-            try {
-                let query = supabaseClient.from('complaints')
-                    .select(`
-                        id, title, content, media_url, status, created_at, votes_count, category, author_role, author_id, admin_reply,
-                        profiles (id, first_name, last_name, avatar_url)
-                    `)
-                    .order('created_at', { ascending: false });
-
-
-
-                if (filterType === 'solved') {
-                    query = query.eq('status', 'resolved');
-                } else if (filterType !== 'my_complaints') {
-                    query = query.in('status', ['approved', 'pending', 'resolved', 'temp_solution', 'needs_info', 'rejected']); 
-                }
-
-                const { data: complaints, error } = await query;
-                if (error) throw error;
-
-                let finalData = complaints;
-
-                const complaintIds = finalData.map(c => c.id);
-                let userVotes = [];
-                if (complaintIds.length > 0) {
-                    const { data: votesData } = await supabaseClient
-                        .from('complaint_votes')
-                        .select('complaint_id')
-                        .eq('user_id', currentUser.id)
-                        .in('complaint_id', complaintIds);
-                    if (votesData) userVotes = votesData.map(v => v.complaint_id);
-                }
-
-                currentPosts = finalData.map(c => ({
-                    id: c.id,
-                    author: c.profiles ? `${c.profiles.first_name || ''} ${c.profiles.last_name || ''}` : (c.author_role === 'admin' ? 'الإدارة (Admin)' : 'مستخدم'),
-                    authorRole: c.author_role,
-                    avatarUrl: c.profiles?.avatar_url,
-                    time: new Date(c.created_at).toLocaleString((currentLang === 'ar' ? 'ar-SA' : 'en-US')),
-                    status: c.status,
-                    title: c.title,
-                    content: c.content,
-                    mediaUrl: c.media_url,
-                    votes: c.votes_count || 0,
-                    hasVoted: userVotes.includes(c.id),
-                    adminReply: c.admin_reply || null
-                }));
-
-                renderPosts(currentPosts);
-
-            } catch (err) {
-                console.error("Error loading feeds", err);
-            }
+                <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-white/5 mb-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <img src="https://ui-avatars.com/api/?name=A&background=eab308&color=fff&rounded=true" class="w-10 h-10 rounded-full">
+                            <div>
+                                <h4 class="font-bold text-sm text-slate-800 dark:text-white">أمين .م</h4>
+                                <p class="text-xs text-slate-500">طالب - منذ 5 ساعات</p>
+                            </div>
+                        </div>
+                        <span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-lg text-xs font-bold">قيد المعالجة</span>
+                    </div>
+                    <h3 class="font-bold text-slate-800 dark:text-white mb-2">نقص الوجبات في الإقامة الجامعية</h3>
+                    <p class="text-sm text-slate-600 dark:text-slate-300 mb-3">لاحظنا تأخراً كبيراً ونقصاً في الوجبات المخصصة للطلبة المتأخرين بسبب المحاضرات المسائية.</p>
+                </div>
+            `;
         }
 
         function searchPosts() {

@@ -741,10 +741,19 @@
 
         // --- Fetch & Render Feeds (Complaints) ---
         async function loadFeed() {
-            const container = document.getElementById('feed-container');
-            if(!container) return;
+            let container = document.getElementById('feed-container');
+            
+            // إذا لم يجد الحاوية، سيقوم بإنشائها وإضافتها داخل main بالقوة
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'feed-container';
+                container.className = 'mt-8 space-y-4 w-full';
+                const mainArea = document.querySelector('main') || document.body;
+                mainArea.appendChild(container);
+            }
+            
             container.innerHTML = `
-                <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-white/5 mb-4">
+                <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-white/5 mb-4 mt-6">
                     <div class="flex justify-between items-start mb-3">
                         <div class="flex items-center gap-3">
                             <img src="https://ui-avatars.com/api/?name=Wassim&background=6366f1&color=fff&rounded=true" class="w-10 h-10 rounded-full">

@@ -763,9 +763,9 @@
                     `)
                     .order('created_at', { ascending: false });
 
-                if (currentUserProfile?.university_id) {
-                    query = query.eq('university_id', currentUserProfile.university_id);
-                }
+                // if (currentUserProfile?.university_id) {
+                //     query = query.eq('university_id', currentUserProfile.university_id);
+                // }
 
                 if (currentUser?.id) {
                     query = query.eq('author_id', currentUser.id); // User only sees their own posts
@@ -1457,6 +1457,18 @@ IMPORTANT: Return ONLY valid JSON, no extra text.`;
         const canvasBg = document.createElement('canvas'); canvasBg.style.position = 'fixed'; canvasBg.style.top = '0'; canvasBg.style.left = '0'; canvasBg.style.width = '100%'; canvasBg.style.height = '100%'; canvasBg.style.zIndex = '-2'; canvasBg.style.pointerEvents = 'none'; document.body.appendChild(canvasBg);
         const ctx = canvasBg.getContext('2d'); function resizeCanvas() { canvasBg.width = window.innerWidth; canvasBg.height = window.innerHeight; } window.addEventListener('resize', resizeCanvas); resizeCanvas();
         let particles = []; class Particle { constructor() { this.x = Math.random() * canvasBg.width; this.y = Math.random() * canvasBg.height; this.vx = (Math.random() - 0.5) * 0.5; this.vy = (Math.random() - 0.5) * 0.5; this.size = Math.random() * 2; } update() { this.x += this.vx; this.y += this.vy; if (this.x < 0 || this.x > canvasBg.width) this.vx *= -1; if (this.y < 0 || this.y > canvasBg.height) this.vy *= -1; } draw() { ctx.fillStyle = 'rgba(100,116,139,0.2)'; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); } } for (let i = 0; i < 30; i++) particles.push(new Particle()); function animateBg() { ctx.clearRect(0, 0, canvasBg.width, canvasBg.height); particles.forEach(p => { p.update(); p.draw(); }); requestAnimationFrame(animateBg); } animateBg();
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll('img').forEach(img => {
+        img.addEventListener('error', function() {
+            this.src = 'https://ui-avatars.com/api/?name=NUIF&background=6366f1&color=fff&rounded=true';
+        });
+        if (!img.complete || img.naturalWidth === 0) {
+            img.src = 'https://ui-avatars.com/api/?name=NUIF&background=6366f1&color=fff&rounded=true';
+        }
+    });
+});
 </script>
 </body>
 

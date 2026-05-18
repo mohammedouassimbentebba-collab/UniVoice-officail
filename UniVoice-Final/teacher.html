@@ -1155,5 +1155,17 @@ IMPORTANT: Return ONLY valid JSON, no extra text.`;
         checkSession();
         
     </script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll('img').forEach(img => {
+        img.addEventListener('error', function() {
+            this.src = 'https://ui-avatars.com/api/?name=NUIF&background=6366f1&color=fff&rounded=true';
+        });
+        if (!img.complete || img.naturalWidth === 0) {
+            img.src = 'https://ui-avatars.com/api/?name=NUIF&background=6366f1&color=fff&rounded=true';
+        }
+    });
+});
+</script>
 </body>
 </html>
